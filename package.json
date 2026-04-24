@@ -1,0 +1,33 @@
+{
+  "name": "ngx-datawindow",
+  "version": "1.0.0",
+  "description": "Angular Material Table wrapper with virtual datastore engine",
+  "scripts": {
+    "build": "ng build ngx-datawindow",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test"
+  },
+  "peerDependencies": {
+    "@angular/cdk": ">=17.0.0",
+    "@angular/common": ">=17.0.0",
+    "@angular/core": ">=17.0.0",
+    "@angular/material": ">=17.0.0"
+  },
+  "dependencies": {
+    "tslib": "^2.6.0"
+  },
+  "exports": {
+    "./datatable": {
+      "types": "./src/lib/datatable.module.d.ts",
+      "esm2022": "./src/lib/datatable.module.mjs",
+      "default": "./src/lib/datatable.module.js"
+    }
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "fake-indexeddb": "^6.2.5",
+    "jest": "29.7.0",
+    "jest-environment-jsdom": "^30.3.0",
+    "ts-jest": "29.2.0"
+  }
+}
