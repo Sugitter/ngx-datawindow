@@ -23,16 +23,15 @@ import { DataTableComponent, DataTableService, DataRow, RowId, RawValue, Toolbar
 import { ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig, AggregationFormula, UpdateData, ValidationResult } from 'ngx-datawindow';
 
 @Component({
-  selector: 'app-demo',
-  standalone: true,
-  imports: [
-    CommonModule, FormsModule,
-    MatTabsModule, MatCardModule, MatButtonModule, MatIconModule,
-    MatDividerModule, MatChipsModule, MatBadgeModule, MatSnackBarModule,
-    MatDialogModule, MatTooltipModule, MatFormFieldModule, MatInputModule,
-    MatSelectModule,
-  ],
-  template: `
+    selector: 'app-demo',
+    imports: [
+        CommonModule, FormsModule,
+        MatTabsModule, MatCardModule, MatButtonModule, MatIconModule,
+        MatDividerModule, MatChipsModule, MatBadgeModule, MatSnackBarModule,
+        MatDialogModule, MatTooltipModule, MatFormFieldModule, MatInputModule,
+        MatSelectModule,
+    ],
+    template: `
     <!-- 功能演示导航 -->
     <div class="demo-nav">
       @for (tab of tabs; track tab.id; let i = $index) {
@@ -405,7 +404,7 @@ import { ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig, AggregationF
       </div>
     }
   `,
-  styles: [`
+    styles: [`
     .demo-nav {
       display: flex;
       gap: 8px;

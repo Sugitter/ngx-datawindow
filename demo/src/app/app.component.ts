@@ -7,14 +7,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 
 @Component({
-  selector: 'app-root',
-  standalone: true,
-  imports: [
-    RouterOutlet, RouterLink, RouterLinkActive,
-    MatToolbarModule, MatSidenavModule, MatListModule,
-    MatIconModule, MatButtonModule,
-  ],
-  template: `
+    selector: 'app-root',
+    imports: [
+        RouterOutlet, RouterLink, RouterLinkActive,
+        MatToolbarModule, MatSidenavModule, MatListModule,
+        MatIconModule, MatButtonModule,
+    ],
+    template: `
     <mat-sidenav-container class="app-container">
       <!-- 侧边导航 -->
       <mat-sidenav mode="side" opened class="app-sidenav">
@@ -49,7 +48,7 @@ import { MatButtonModule } from '@angular/material/button';
       </mat-sidenav-content>
     </mat-sidenav-container>
   `,
-  styles: [`
+    styles: [`
     .app-container {
       height: 100vh;
     }
