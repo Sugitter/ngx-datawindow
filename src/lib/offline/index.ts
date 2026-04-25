@@ -30,7 +30,8 @@ export {
   type PersistedMeta,
   type SyncStatus,
   type ChangeLog,
-  type PersistResult
+  type PersistResult,
+  type RowVersionInfo
 } from './offline-storage';
 
 // Offline Service

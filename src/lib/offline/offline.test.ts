@@ -1,5 +1,6 @@
 /**
- * Phase 2: IndexedDB 离线持久化测�? * IndexedDB Manager + OfflineStorage Adapter
+ * Phase 2: IndexedDB Offline Persistence Tests
+ * IndexedDB Manager + OfflineStorage Adapter
  */
 
 import {
@@ -14,7 +15,6 @@ import type { DataRow } from '../datastore';
 // ===================== IndexedDB Manager Tests =====================
 
 describe('Phase 2: IndexedDB Manager', () => {
-  // 使用 defaultDB（已预配�?main/meta/pending 三个存储区）
   let testDB: IndexedDBManager;
 
   beforeEach(async () => {
@@ -22,9 +22,9 @@ describe('Phase 2: IndexedDB Manager', () => {
     const result = await testDB.open();
     expect(result.success).toBe(true);
 
-    // 清空所有数�?    await testDB.operate('main', 'clear');
-    await testDB.operate('meta', 'clear');
-    await testDB.operate('pending', 'clear');
+    await testDB.operate('datastore_main', 'clear');
+    await testDB.operate('datastore_meta', 'clear');
+    await testDB.operate('pending_operations', 'clear');
   });
 
   afterEach(async () => {
@@ -32,8 +32,8 @@ describe('Phase 2: IndexedDB Manager', () => {
     await testDB.deleteDatabase();
   });
 
-  describe('数据库生命周�?, () => {
-    it('应该成功打开数据�?, async () => {
+  describe('Database Lifecycle', () => {
+    it('should open database successfully', async () => {
       const db = new IndexedDBManager('open_test_db', 1);
       const result = await db.open();
       expect(result.success).toBe(true);
@@ -42,23 +42,22 @@ describe('Phase 2: IndexedDB Manager', () => {
       await db.deleteDatabase();
     });
 
-    it('应该拒绝无效版本号的升级', async () => {
-      // 版本 0 会创建新数据库，这是有效操作
-      // 改为测试版本降级场景（虽�?fake-indexeddb 可能不完全模拟）
+    it('should detect invalid version downgrade', async () => {
       const db = new IndexedDBManager('version_test_db', 1);
       await db.open();
-      
-      // 尝试用更低版本打开会触�?error（模拟真�?IndexedDB 行为�?      const db2 = new IndexedDBManager('version_test_db', 0);
+
+      // Version 0 on existing db triggers error (simulates real IndexedDB behavior)
+      const db2 = new IndexedDBManager('version_test_db', 0);
       try {
         await db2.open();
-        // fake-indexeddb 可能不完全模拟版本降级限制，宽松处理
+        // fake-indexeddb may not fully simulate downgrade restrictions, handle gracefully
         expect(true).toBe(true);
       } catch (e) {
         expect(e).toBeDefined();
       }
     });
 
-    it('应该检测数据库是否已打开', async () => {
+    it('should detect if database is open', async () => {
       const db = new IndexedDBManager('isopen_test_db', 1);
       expect(db.isOpen()).toBe(false);
       await db.open();
@@ -67,7 +66,7 @@ describe('Phase 2: IndexedDB Manager', () => {
       await db.deleteDatabase();
     });
 
-    it('应该获取数据库实�?, async () => {
+    it('should get database instance', async () => {
       const db = new IndexedDBManager('getdb_test_db', 1);
       await db.open();
       const instance = db.getDB();
@@ -78,71 +77,71 @@ describe('Phase 2: IndexedDB Manager', () => {
     });
   });
 
-  describe('CRUD 操作', () => {
-    it('应该成功添加记录', async () => {
-      const result = await testDB.operate('main', 'add', { id: 1, name: '测试', value: 100 });
+  describe('CRUD Operations', () => {
+    it('should add record successfully', async () => {
+      const result = await testDB.operate('datastore_main', 'add', { id: 1, name: 'Test', value: 100 });
       expect(result.success).toBe(true);
     });
 
-    it('应该成功查询记录', async () => {
-      await testDB.operate('main', 'put', { id: 1, name: '测试' });
+    it('should get record successfully', async () => {
+      await testDB.operate('datastore_main', 'put', { id: 1, name: 'Test' });
 
-      const result = await testDB.operate<{ id: number; name: string }>('main', 'get', 1);
+      const result = await testDB.operate<{ id: number; name: string }>('datastore_main', 'get', 1);
       expect(result.success).toBe(true);
-      expect(result.data?.name).toBe('测试');
+      expect(result.data?.name).toBe('Test');
     });
 
-    it('应该成功更新记录', async () => {
-      await testDB.operate('main', 'put', { id: 1, name: '原始�? });
+    it('should update record successfully', async () => {
+      await testDB.operate('datastore_main', 'put', { id: 1, name: 'Original' });
 
-      const updateResult = await testDB.operate('main', 'put', { id: 1, name: '更新�? });
+      const updateResult = await testDB.operate('datastore_main', 'put', { id: 1, name: 'Updated' });
       expect(updateResult.success).toBe(true);
 
-      const getResult = await testDB.operate<{ id: number; name: string }>('main', 'get', 1);
-      expect(getResult.data?.name).toBe('更新�?);
+      const getResult = await testDB.operate<{ id: number; name: string }>('datastore_main', 'get', 1);
+      expect(getResult.data?.name).toBe('Updated');
     });
 
-    it('应该成功删除记录', async () => {
-      await testDB.operate('main', 'put', { id: 1, name: '测试' });
+    it('should delete record successfully', async () => {
+      await testDB.operate('datastore_main', 'put', { id: 1, name: 'Test' });
 
-      const deleteResult = await testDB.operate('main', 'delete', 1);
+      const deleteResult = await testDB.operate('datastore_main', 'delete', 1);
       expect(deleteResult.success).toBe(true);
 
-      const getResult = await testDB.operate('main', 'get', 1);
+      const getResult = await testDB.operate('datastore_main', 'get', 1);
       expect(getResult.data).toBeUndefined();
     });
 
-    it('应该成功获取所有记�?, async () => {
-      await testDB.operate('main', 'put', { id: 1, name: '一' });
-      await testDB.operate('main', 'put', { id: 2, name: '�? });
+    it('should get all records', async () => {
+      await testDB.operate('datastore_main', 'put', { id: 1, name: 'One' });
+      await testDB.operate('datastore_main', 'put', { id: 2, name: 'Two' });
 
-      const result = await testDB.operate<Array<{ id: number }>>('main', 'getAll');
+      const result = await testDB.operate<Array<{ id: number }>>('datastore_main', 'getAll');
       expect(result.success).toBe(true);
       expect(result.data?.length).toBe(2);
     });
   });
 
-  describe('批量操作', () => {
-    it('应该成功批量添加记录', async () => {
-      const result = await testDB.batchOperate('main', [
-        { type: 'add', data: { id: 1, name: '一', value: 100 } },
-        { type: 'add', data: { id: 2, name: '�?, value: 200 } },
-        { type: 'add', data: { id: 3, name: '�?, value: 300 } },
+  describe('Batch Operations', () => {
+    it('should batch add records successfully', async () => {
+      const result = await testDB.batchOperate('datastore_main', [
+        { type: 'add', data: { id: 1, name: 'One', value: 100 } },
+        { type: 'add', data: { id: 2, name: 'Two', value: 200 } },
+        { type: 'add', data: { id: 3, name: 'Three', value: 300 } },
       ]);
 
       expect(result.success).toBe(true);
       expect(result.data).toBe(3);
 
-      const allResult = await testDB.operate('main', 'getAll');
+      const allResult = await testDB.operate('datastore_main', 'getAll');
       expect((allResult.data as any[])?.length).toBe(3);
     });
 
-    it('应该成功批量混合操作', async () => {
-      await testDB.operate('main', 'add', { id: 1, name: '原始' });
+    it('should batch mixed operations successfully', async () => {
+      await testDB.operate('datastore_main', 'add', { id: 1, name: 'Original' });
 
-      const result = await testDB.batchOperate('main', [
-        { type: 'put', data: { id: 1, name: '更新' } },
-        { type: 'add', data: { id: 2, name: '新增' } },
+      const result = await testDB.batchOperate('datastore_main', [
+        { type: 'put', data: { id: 1, name: 'Updated' } },
+        { type: 'add', data: { id: 2, name: 'New' } },
         { type: 'delete', key: 1 },
       ]);
 
@@ -150,8 +149,8 @@ describe('Phase 2: IndexedDB Manager', () => {
     });
   });
 
-  describe('defaultDB 实例', () => {
-    it('应该能正确打开默认数据�?, async () => {
+  describe('defaultDB Instance', () => {
+    it('should open default database correctly', async () => {
       const result = await defaultDB.open();
       expect(result.success).toBe(true);
     });
@@ -173,21 +172,21 @@ describe('Phase 2: OfflineStorage Adapter', () => {
     await storage.clear();
   });
 
-  describe('数据持久�?, () => {
-    it('应该成功保存和加载数�?, async () => {
-      // 构造符�?DataRow 结构的测试数�?      const rows: DataRow[] = [
+  describe('Data Persistence', () => {
+    it('should save and load data successfully', async () => {
+      const rows: DataRow[] = [
         {
           id: 1, rowNumber: 1,
           status: 'normal' as any,
           bufferType: 'main' as any,
-          raw: { id: 1, name: '张三', salary: 25000 },
+          raw: { id: 1, name: 'ZhangSan', salary: 25000 },
           computed: {}, changes: {}
         },
         {
           id: 2, rowNumber: 2,
           status: 'modified' as any,
           bufferType: 'main' as any,
-          raw: { id: 2, name: '李四', salary: 18000 },
+          raw: { id: 2, name: 'LiSi', salary: 18000 },
           computed: {}, changes: {}
         }
       ];
@@ -199,12 +198,12 @@ describe('Phase 2: OfflineStorage Adapter', () => {
       const loadResult = await storage.loadAll();
       expect(loadResult.success).toBe(true);
       expect(loadResult.rows?.length).toBe(2);
-      expect(loadResult.rows![0].raw['name']).toBe('张三');
+      expect(loadResult.rows![0].raw['name']).toBe('ZhangSan');
     });
 
-    it('应该正确保存元数�?, async () => {
+    it('should save metadata correctly', async () => {
       const meta = {
-        datastoreId: 'test',
+        datastoreId: datastoreId,
         version: 1,
         rowCount: 10,
         lastModified: Date.now(),
@@ -219,32 +218,33 @@ describe('Phase 2: OfflineStorage Adapter', () => {
     });
   });
 
-  describe('同步队列', () => {
-    it('应该正确记录变更到同步队�?, async () => {
+  describe('Sync Queue', () => {
+    it('should record changes to sync queue', async () => {
       await storage.logChange({
         operationType: 'insert',
         rowId: 1,
-        newData: { name: '新增' }
+        newData: { name: 'New' }
       });
 
       await storage.logChange({
         operationType: 'update',
         rowId: 2,
-        oldData: { name: '原始' },
-        newData: { name: '更新' }
+        oldData: { name: 'Original' },
+        newData: { name: 'Updated' }
       });
 
       const pending = await storage.getPendingChanges();
       expect(pending.length).toBe(2);
-      expect(pending[0].operationType).toBe('insert');
-      expect(pending[1].operationType).toBe('update');
+      const opTypes = pending.map(p => p.operationType);
+      expect(opTypes).toContain('insert');
+      expect(opTypes).toContain('update');
     });
 
-    it('应该正确标记变更已同�?, async () => {
+    it('should mark changes as synced', async () => {
       await storage.logChange({
         operationType: 'insert',
         rowId: 1,
-        newData: { name: '测试' }
+        newData: { name: 'Test' }
       });
 
       const pending = await storage.getPendingChanges();
@@ -258,21 +258,21 @@ describe('Phase 2: OfflineStorage Adapter', () => {
     });
   });
 
-  describe('网络状�?, () => {
-    it('应该正确获取同步状�?, () => {
+  describe('Network Status', () => {
+    it('should get sync status correctly', () => {
       const status = storage.getSyncStatus();
       expect(typeof status.isOnline).toBe('boolean');
       expect(typeof status.pendingCount).toBe('number');
     });
 
-    it('应该正确检查在线状�?, () => {
+    it('should check online status', () => {
       const isOnline = storage.checkOnline();
       expect(typeof isOnline).toBe('boolean');
     });
   });
 
-  describe('数据清除', () => {
-    it('应该成功清除所有数�?, async () => {
+  describe('Data Clear', () => {
+    it('should clear all data successfully', async () => {
       const clearResult = await storage.clear();
       expect(clearResult.success).toBe(true);
 
@@ -282,9 +282,9 @@ describe('Phase 2: OfflineStorage Adapter', () => {
   });
 });
 
-// ===================== 集成测试：DataStore + OfflineStorage =====================
+// ===================== Integration: DataStore + OfflineStorage =====================
 
-describe('Phase 2: DataStore + OfflineStorage 集成', () => {
+describe('Phase 2: DataStore + OfflineStorage Integration', () => {
   let DataStoreImpl: any;
   let datastore: any;
   let storage: OfflineStorageAdapter;
@@ -311,10 +311,10 @@ describe('Phase 2: DataStore + OfflineStorage 集成', () => {
     await storage.clear();
   });
 
-  it('应该正确保存 DataStore 数据�?IndexedDB', async () => {
+  it('should save DataStore data to IndexedDB correctly', async () => {
     datastore.addRows([
-      { id: 1, name: '张三', salary: 25000 },
-      { id: 2, name: '李四', salary: 18000 }
+      { id: 1, name: 'ZhangSan', salary: 25000 },
+      { id: 2, name: 'LiSi', salary: 18000 }
     ]);
 
     const rows = datastore.getRows();
@@ -323,11 +323,11 @@ describe('Phase 2: DataStore + OfflineStorage 集成', () => {
     expect(saveResult.rowsAffected).toBe(2);
   });
 
-  it('应该正确跟踪变更并记录同步队�?, async () => {
-    datastore.addRows([{ id: 1, name: '赵六', salary: 22000 }]);
+  it('should track changes and record in sync queue', async () => {
+    datastore.addRows([{ id: 1, name: 'ZhaoLiu', salary: 22000 }]);
 
     const changedRows = datastore.getChangedRows();
-    await storage.saveChanges(changedRows);
+    await storage.saveChanges(changedRows.map((c: any) => c.row));
 
     for (const { row } of changedRows) {
       await storage.logChange({

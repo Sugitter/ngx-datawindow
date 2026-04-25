@@ -28,6 +28,7 @@
     "fake-indexeddb": "^6.2.5",
     "jest": "29.7.0",
     "jest-environment-jsdom": "^30.3.0",
-    "ts-jest": "29.2.0"
+    "ts-jest": "29.2.0",
+    "typescript": "^5.9.3"
   }
 }

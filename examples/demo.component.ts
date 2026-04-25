@@ -21,7 +21,7 @@ import {
   RowId,
   AggregationFormula,
   createDataStore,
-} from './datatable';
+} from 'ngx-datawindow';
 
 @Component({
   selector: 'app-demo',
@@ -388,7 +388,7 @@ export class DemoComponent implements OnInit {
       });
 
       const results = svc.computeAllAggregations();
-      this.aggregationResults = Object.values(results).map(r => ({
+      this.aggregationResults = Object.values(results).map((r: any) => ({
         formulaId: r.formulaId,
         value: r.value as number
       }));

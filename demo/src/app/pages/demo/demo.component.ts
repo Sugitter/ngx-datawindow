@@ -19,14 +19,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 
-import { DataTableComponent } from '../../src/lib/datatable.component';
-import { DataTableService } from '../../src/lib/datatable.service';
-import {
-  DataStoreConfig, ColumnConfig, TableConfig,
-  DataRow, RowId, AggregationFormula,
-  UpdateData, ValidationResult, RawValue
-} from '../../src/lib/datastore';
-import { ToolbarAction } from '../../src/lib/models';
+import { DataTableComponent, DataTableService, DataRow, RowId, RawValue, ToolbarEvent } from 'ngx-datawindow';
+import { ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig, AggregationFormula, UpdateData, ValidationResult } from 'ngx-datawindow';
 
 @Component({
   selector: 'app-demo',

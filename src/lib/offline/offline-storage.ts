@@ -58,6 +58,13 @@ export interface PersistResult {
   error?: string;
 }
 
+/** 版本信息 */
+export interface RowVersionInfo {
+  rowId: number;
+  localVersion: number;
+  lastModified: number;
+}
+
 /**
  * OfflineStorageAdapter
  * 管理 DataStore 的离线持久化
@@ -67,6 +74,8 @@ export class OfflineStorageAdapter {
   private datastoreId: string;
   private syncQueue: ChangeLog[] = [];
   private isOnline: boolean = navigator.onLine;
+  /** 本地行版本追踪：rowId → version */
+  private rowVersionMap: Map<number, number> = new Map();
 
   constructor(datastoreId: string, db?: IndexedDBManager) {
     this.datastoreId = datastoreId;
@@ -107,6 +116,9 @@ export class OfflineStorageAdapter {
 
     const persistedRows: PersistedRow[] = rows.map(row => {
       const rawCopy = JSON.parse(JSON.stringify(row.raw));
+      // 新行版本从 1 开始，已存在的行保留原版本
+      const localVersion = this.rowVersionMap.get(row.id) ?? 1;
+      this.rowVersionMap.set(row.id, localVersion);
       return {
         id: row.id,
         rowNumber: row.rowNumber,
@@ -114,8 +126,8 @@ export class OfflineStorageAdapter {
         status: row.status,
         raw: rawCopy,
         computed: JSON.parse(JSON.stringify(row.computed)),
-        changes: JSON.parse(JSON.stringify(Object.entries(row.changes))),
-        _version: 1,
+        changes: JSON.parse(JSON.stringify(row.changes)),
+        _version: localVersion,
         _checksum: this.computeChecksum(row.raw)
       };
     });
@@ -156,20 +168,26 @@ export class OfflineStorageAdapter {
 
     const batchResult = await this.db.batchOperate(
       STORE_CONFIG.main,
-      changes.map(row => ({
-        type: 'put' as const,
-        data: {
-          id: row.id,
-          rowNumber: row.rowNumber,
-          bufferType: row.bufferType,
-          status: row.status,
-          raw: JSON.parse(JSON.stringify(row.raw)),
-          computed: JSON.parse(JSON.stringify(row.computed)),
-          changes: JSON.parse(JSON.stringify(Object.entries(row.changes))),
-          _version: 1,
-          _checksum: this.computeChecksum(row.raw)
-        }
-      }))
+      changes.map(row => {
+        // modified/new rows increment their local version
+        const prevVersion = this.rowVersionMap.get(row.id) ?? 1;
+        const newVersion = row.status !== 'normal' ? prevVersion + 1 : prevVersion;
+        this.rowVersionMap.set(row.id, newVersion);
+        return {
+          type: 'put' as const,
+          data: {
+            id: row.id,
+            rowNumber: row.rowNumber,
+            bufferType: row.bufferType,
+            status: row.status,
+            raw: JSON.parse(JSON.stringify(row.raw)),
+            computed: JSON.parse(JSON.stringify(row.computed)),
+            changes: JSON.parse(JSON.stringify(row.changes)),
+            _version: newVersion,
+            _checksum: this.computeChecksum(row.raw)
+          }
+        };
+      })
     );
 
     return {
@@ -192,15 +210,21 @@ export class OfflineStorageAdapter {
       return { success: false, rowsAffected: 0, error: allResult.error };
     }
 
-    const rows: DataRow[] = allResult.data.map((p: any) => ({
-      id: p.id,
-      rowNumber: p.rowNumber ?? p._rowNumber,
-      bufferType: p.bufferType ?? 'main',
-      status: p.status ?? 'normal',
-      raw: p.raw,
-      computed: p.computed ?? {},
-      changes: p.changes ?? {}
-    }));
+    const rows: DataRow[] = allResult.data.map((p: any) => {
+      // Restore local version map from loaded data
+      if (typeof p._version === 'number') {
+        this.rowVersionMap.set(p.id, p._version);
+      }
+      return {
+        id: p.id,
+        rowNumber: p.rowNumber ?? p._rowNumber,
+        bufferType: p.bufferType ?? 'main',
+        status: p.status ?? 'normal',
+        raw: p.raw,
+        computed: p.computed ?? {},
+        changes: p.changes ?? {}
+      };
+    });
 
     return { success: true, rowsAffected: rows.length, rows };
   }
@@ -270,6 +294,46 @@ export class OfflineStorageAdapter {
     this.syncQueue = this.syncQueue.filter(c => c.operationId !== operationId);
   }
 
+  /** 接受变更：将目标行的 status 改为 normal，changes 清空 */
+  async acceptChanges(rowIds?: number[]): Promise<PersistResult> {
+    const result = await this.db.open();
+    if (!result.success) {
+      return { success: false, rowsAffected: 0, error: result.error };
+    }
+
+    const allResult = await this.db.operate<PersistedRow[]>(STORE_CONFIG.main, 'getAll');
+    if (!allResult.success || !allResult.data) {
+      return { success: false, rowsAffected: 0, error: allResult.error };
+    }
+
+    const targets = rowIds
+      ? allResult.data.filter(r => rowIds.includes(r.id))
+      : allResult.data.filter(r => r.status !== 'normal');
+
+    if (targets.length === 0) {
+      return { success: true, rowsAffected: 0 };
+    }
+
+    const updated = targets.map(r => ({
+      ...r,
+      status: 'normal' as const,
+      changes: {} as Record<string, unknown>,
+      _version: r._version + 1,
+      _checksum: this.computeChecksum(r.raw)
+    }));
+
+    const batchResult = await this.db.batchOperate(
+      STORE_CONFIG.main,
+      updated.map(row => ({ type: 'put' as const, data: row }))
+    );
+
+    return {
+      success: batchResult.success ?? false,
+      rowsAffected: batchResult.data ?? 0,
+      error: batchResult.error
+    };
+  }
+
   /** 触发同步 */
   async triggerSync(): Promise<void> {
     if (!this.isOnline) {
@@ -317,8 +381,48 @@ export class OfflineStorageAdapter {
     await this.db.batchOperate(STORE_CONFIG.pending, [{ type: 'clear' as const }]);
 
     this.syncQueue = [];
+    this.rowVersionMap.clear();
 
     return { success: true, rowsAffected: 0 };
+  }
+
+  /** 获取本地版本号（用于乐观锁检测） */
+  getLocalVersion(rowId: number): number {
+    return this.rowVersionMap.get(rowId) ?? 0;
+  }
+
+  /** 获取所有本地版本信息 */
+  getAllLocalVersions(): RowVersionInfo[] {
+    const now = Date.now();
+    return Array.from(this.rowVersionMap.entries()).map(([rowId, localVersion]) => ({
+      rowId,
+      localVersion,
+      lastModified: now
+    }));
+  }
+
+  /** 批量更新本地版本号（同步成功后调用） */
+  updateLocalVersions(versions: Array<{ rowId: number; serverVersion: number }>): void {
+    for (const { rowId, serverVersion } of versions) {
+      if (serverVersion > 0) {
+        this.rowVersionMap.set(rowId, serverVersion);
+      }
+    }
+  }
+
+  /** 检测版本冲突：返回与服务端版本不一致的行 */
+  async detectVersionConflicts(
+    serverVersions: Array<{ rowId: number; serverVersion: number }>
+  ): Promise<Array<{ rowId: number; localVersion: number; serverVersion: number }>> {
+    const conflicts: Array<{ rowId: number; localVersion: number; serverVersion: number }> = [];
+    for (const { rowId, serverVersion } of serverVersions) {
+      const localVersion = this.rowVersionMap.get(rowId) ?? 0;
+      // 本地版本 > 0（已加载过）且与服务端不一致 = 冲突
+      if (localVersion > 0 && localVersion !== serverVersion) {
+        conflicts.push({ rowId, localVersion, serverVersion });
+      }
+    }
+    return conflicts;
   }
 
   /** 计算数据校验和 */

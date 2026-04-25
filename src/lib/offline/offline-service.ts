@@ -1,6 +1,7 @@
 /**
  * 离线服务
  * 集成 DataStore 与 IndexedDB，提供完整的离线支持
+ * 包含乐观锁冲突检测与性能监控
  */
 
 import { DataStoreImpl } from '../datastore';
@@ -12,8 +13,16 @@ export type SyncCallback = (
     type: 'insert' | 'update' | 'delete';
     rowId: number;
     data: Record<string, unknown>;
+    /** 本地版本号，用于乐观锁检测 */
+    localVersion?: number;
   }>
-) => Promise<Array<{ rowId: number; serverId?: number; error?: string }>>;
+) => Promise<Array<{
+  rowId: number;
+  serverId?: number;
+  /** 服务端版本号，同步成功后返回供乐观锁使用 */
+  serverVersion?: number;
+  error?: string;
+}>>;
 
 /** 冲突解决策略 */
 export type ConflictStrategy = 'server_wins' | 'client_wins' | 'manual';
@@ -21,39 +30,46 @@ export type ConflictStrategy = 'server_wins' | 'client_wins' | 'manual';
 /** 冲突信息 */
 export interface ConflictInfo {
   rowId: number;
+  localVersion: number;
+  serverVersion: number;
   clientData: Record<string, unknown>;
   serverData: Record<string, unknown>;
   conflictType: 'modified' | 'deleted';
+  /** 冲突字段列表 */
+  conflictFields?: string[];
 }
 
 /** 冲突解决回调 */
 export type ConflictResolver = (conflicts: ConflictInfo[]) => Promise<Record<number, 'client' | 'server'>>;
 
+/** 同步性能指标 */
+export interface SyncMetrics {
+  duration: number;
+  bytesSent: number;
+  bytesReceived: number;
+  syncedCount: number;
+  failedCount: number;
+  conflictCount: number;
+  pendingCount: number;
+}
+
 /** 离线服务配置 */
 export interface OfflineServiceConfig {
-  /** DataStore 实例 */
   datastore: DataStoreImpl;
-  /** DataStore ID */
   datastoreId: string;
-  /** 服务器同步回调 */
   syncCallback: SyncCallback;
-  /** 冲突解决策略 */
   conflictStrategy?: ConflictStrategy;
-  /** 冲突解决回调（当策略为 manual 时） */
   conflictResolver?: ConflictResolver;
-  /** 是否在启动时自动加载本地数据 */
   autoLoadOnInit?: boolean;
-  /** 是否在变更时自动保存到 IndexedDB */
   autoPersist?: boolean;
-  /** 是否在网络恢复时自动同步 */
   autoSyncOnReconnect?: boolean;
 }
 
 /** 离线服务事件 */
 export interface OfflineServiceEvents {
   onSyncStart?: () => void;
-  onSyncComplete?: (syncedCount: number) => void;
-  onSyncError?: (error: Error) => void;
+  onSyncComplete?: (syncedCount: number, metrics: SyncMetrics) => void;
+  onSyncError?: (error: Error, metrics?: SyncMetrics) => void;
   onConflict?: (conflicts: ConflictInfo[]) => void;
   onOnlineStatusChange?: (isOnline: boolean) => void;
   onStorageError?: (error: Error) => void;
@@ -64,13 +80,16 @@ export interface SyncResult {
   success: boolean;
   syncedCount: number;
   failedCount: number;
+  conflictCount: number;
   conflicts: ConflictInfo[];
+  metrics?: SyncMetrics;
   error?: string;
 }
 
 /**
  * OfflineService
  * 离线数据服务，集成 DataStore 与 IndexedDB
+ * 支持乐观锁冲突检测与性能监控
  */
 export class OfflineService {
   private datastore: DataStoreImpl;
@@ -79,6 +98,7 @@ export class OfflineService {
   private events: OfflineServiceEvents;
   private isInitialized: boolean = false;
   private isSyncing: boolean = false;
+  private lastSyncTime: number = 0;
 
   constructor(config: OfflineServiceConfig, events?: OfflineServiceEvents) {
     this.datastore = config.datastore;
@@ -92,9 +112,53 @@ export class OfflineService {
       ...config
     };
     this.events = events ?? {};
-
-    // 注册 DataStore 事件监听器
     this.setupDataStoreListeners();
+  }
+
+  /** 设置 DataStore 事件监听 */
+  private setupDataStoreListeners(): void {
+    // 监听 rowAdded（新增行触发）
+    this.datastore.on('rowAdded', async (event: any) => {
+      if (!this.config.autoPersist) return;
+      try {
+        const rows = Array.isArray(event.rows) ? event.rows : [event.row].filter(Boolean);
+        for (const row of rows) {
+          await this.storage.saveChanges([row]);
+          await this.storage.logChange({
+            operationType: 'insert',
+            rowId: row.id,
+            newData: row.raw
+          });
+        }
+      } catch (error) {
+        this.events.onStorageError?.(error as Error);
+      }
+    });
+
+    // 监听 rowStatusChanged（状态变更触发，包括修改/删除）
+    this.datastore.on('rowStatusChanged', async (event: any) => {
+      if (!this.config.autoPersist) return;
+      try {
+        const row = this.datastore.getRowById(event.rowId);
+        if (!row || row.status === 'normal') return;
+        await this.storage.saveChanges([row]);
+        await this.storage.logChange({
+          operationType: row.status === 'deleted' ? 'delete' : 'update',
+          rowId: row.id,
+          newData: row.raw
+        });
+      } catch (error) {
+        this.events.onStorageError?.(error as Error);
+      }
+    });
+
+    window.addEventListener('online', () => {
+      this.events.onOnlineStatusChange?.(true);
+      if (this.config.autoSyncOnReconnect) this.sync().catch(() => {});
+    });
+    window.addEventListener('offline', () => {
+      this.events.onOnlineStatusChange?.(false);
+    });
   }
 
   /** 初始化服务 */
@@ -103,13 +167,10 @@ export class OfflineService {
       return { success: true, loadedFromCache: false };
     }
 
-    // 尝试从 IndexedDB 加载数据
     if (this.config.autoLoadOnInit) {
       const loadResult = await this.storage.loadAll();
       if (loadResult.success && loadResult.rows && loadResult.rows.length > 0) {
-        // 用本地数据初始化 DataStore
         this.datastore.setData(loadResult.rows as any);
-        console.log(`[OfflineService] Loaded ${loadResult.rowsAffected} rows from IndexedDB`);
         this.isInitialized = true;
         return { success: true, loadedFromCache: true };
       }
@@ -117,41 +178,6 @@ export class OfflineService {
 
     this.isInitialized = true;
     return { success: true, loadedFromCache: false };
-  }
-
-  /** 设置 DataStore 事件监听 */
-  private setupDataStoreListeners(): void {
-    // 监听变更事件，自动保存到 IndexedDB
-    this.datastore.on('rowStatusChanged', async (event) => {
-      if (this.config.autoPersist) {
-        const changedRows = this.datastore.getChangedRows();
-        const rowArray = changedRows.map(c => c.row);
-        await this.storage.saveChanges(rowArray);
-
-        // 记录到同步队列
-        for (const { row } of changedRows) {
-          if (row.status === 'new') {
-            await this.storage.logChange({
-              operationType: 'insert',
-              rowId: row.id,
-              newData: row.raw
-            });
-          } else if (row.status === 'modified') {
-            await this.storage.logChange({
-              operationType: 'update',
-              rowId: row.id,
-              newData: row.raw
-            });
-          } else if (row.status === 'deleted') {
-            await this.storage.logChange({
-              operationType: 'delete',
-              rowId: row.id,
-              newData: row.raw
-            });
-          }
-        }
-      }
-    });
   }
 
   /** 获取同步状态 */
@@ -167,68 +193,93 @@ export class OfflineService {
   /** 手动触发同步 */
   async sync(): Promise<SyncResult> {
     if (this.isSyncing) {
-      return { success: false, syncedCount: 0, failedCount: 0, conflicts: [], error: 'Sync already in progress' };
+      return { success: false, syncedCount: 0, failedCount: 0, conflictCount: 0, conflicts: [], error: 'Sync already in progress' };
     }
 
     if (!this.storage.checkOnline()) {
-      return { success: false, syncedCount: 0, failedCount: 0, conflicts: [], error: 'Offline' };
+      return { success: false, syncedCount: 0, failedCount: 0, conflictCount: 0, conflicts: [], error: 'Offline' };
     }
 
     this.isSyncing = true;
     this.events.onSyncStart?.();
+    const startTime = Date.now();
+    let bytesSent = 0;
 
     const result: SyncResult = {
       success: true,
       syncedCount: 0,
       failedCount: 0,
+      conflictCount: 0,
       conflicts: []
     };
 
+    const buildMetrics = (): SyncMetrics => ({
+      duration: Date.now() - startTime,
+      bytesSent,
+      bytesReceived: 0,
+      syncedCount: result.syncedCount,
+      failedCount: result.failedCount,
+      conflictCount: result.conflictCount,
+      pendingCount: 0
+    });
+
     try {
-      // 获取待同步的变更
       const pendingChanges = await this.storage.getPendingChanges();
 
       if (pendingChanges.length === 0) {
-        this.events.onSyncComplete?.(0);
+        result.metrics = buildMetrics();
+        this.events.onSyncComplete?.(0, result.metrics);
         this.isSyncing = false;
         return result;
       }
 
-      // 准备同步数据
-      const syncData = pendingChanges.map(change => ({
-        type: change.operationType,
-        rowId: change.rowId,
-        data: change.newData
-      }));
+      // 构造同步数据：带上本地版本号（乐观锁关键）
+      const syncData = pendingChanges.map(change => {
+        const localVersion = this.storage.getLocalVersion(change.rowId);
+        return {
+          type: change.operationType,
+          rowId: change.rowId,
+          data: change.newData,
+          localVersion
+        };
+      });
 
-      // 调用同步回调
+      bytesSent = JSON.stringify(syncData).length;
+
+      // 调用服务端同步回调
       const syncResponses = await this.config.syncCallback(syncData);
 
-      // 处理同步响应
+      // ─── 冲突检测（乐观锁核心）──────────────────────────────
+      const conflicts = this.detectConflicts(pendingChanges, syncResponses);
+      result.conflicts = conflicts;
+      result.conflictCount = conflicts.length;
+
+      if (conflicts.length > 0) {
+        this.events.onConflict?.(conflicts);
+        await this.resolveConflicts(conflicts);
+      }
+
+      // ─── 处理同步响应 ─────────────────────────────────────
       for (const response of syncResponses) {
         if (response.error) {
           result.failedCount++;
-        } else {
-          result.syncedCount++;
-          // 标记已同步
-          const change = pendingChanges.find(c => c.rowId === response.rowId);
-          if (change) {
-            await this.storage.markSynced(change.operationId);
-          }
+          continue;
         }
-      }
 
-      // 处理冲突检测（乐观锁）
-      if (this.config.conflictStrategy === 'server_wins') {
-        // 服务端数据优先，自动合并
-        await this.handleServerWinsConflicts(syncResponses);
-      } else if (this.config.conflictStrategy === 'manual' && this.config.conflictResolver) {
-        // 需要手动解决冲突
-        const conflicts = await this.detectConflicts(syncResponses);
-        if (conflicts.length > 0) {
-          this.events.onConflict?.(conflicts);
-          const resolutions = await this.config.conflictResolver(conflicts);
-          await this.applyConflictResolutions(conflicts, resolutions);
+        // 成功的同步：更新本地版本号为服务端版本
+        if (typeof response.serverVersion === 'number') {
+          this.storage.updateLocalVersions([{
+            rowId: response.rowId,
+            serverVersion: response.serverVersion
+          }]);
+        }
+
+        result.syncedCount++;
+        const change = pendingChanges.find(c => c.rowId === response.rowId);
+        if (change) {
+          await this.storage.markSynced(change.operationId);
+          // 接受变更：清除 changes，status → normal，版本已更新
+          await this.storage.acceptChanges([response.rowId]);
         }
       }
 
@@ -242,34 +293,112 @@ export class OfflineService {
         checksum: ''
       });
 
-      this.events.onSyncComplete?.(result.syncedCount);
+      this.lastSyncTime = Date.now();
+      result.metrics = buildMetrics();
+      this.events.onSyncComplete?.(result.syncedCount, result.metrics);
     } catch (error) {
       result.success = false;
       result.error = error instanceof Error ? error.message : 'Unknown error';
-      this.events.onSyncError?.(error as Error);
+      result.metrics = buildMetrics();
+      this.events.onSyncError?.(error as Error, result.metrics);
     }
 
     this.isSyncing = false;
     return result;
   }
 
-  /** 处理服务端数据优先的冲突 */
-  private async handleServerWinsConflicts(_responses: Array<{ rowId: number; serverId?: number; error?: string }>): Promise<void> {
-    // 简化实现：当服务端返回数据时，用服务端数据覆盖本地
-    // 实际应从 syncCallback 获取服务端最新数据
-    console.log('[OfflineService] Server-wins conflict resolution applied');
-  }
-
-  /** 检测冲突 */
-  private async detectConflicts(_responses: Array<{ rowId: number; serverId?: number; error?: string }>): Promise<ConflictInfo[]> {
-    // 简化实现：检测本地修改时间与服务端不一致的行
+  /**
+   * 乐观锁冲突检测
+   * 策略：服务端返回 serverVersion，若与本地版本不一致 → 冲突
+   */
+  private detectConflicts(
+    pendingChanges: Array<{ rowId: number; newData: Record<string, unknown>; operationType: string }>,
+    responses: Array<{ rowId: number; serverVersion?: number; error?: string }>
+  ): ConflictInfo[] {
     const conflicts: ConflictInfo[] = [];
-    // 实际应与服务器通信获取服务端版本号进行比较
+
+    for (const response of responses) {
+      if (response.error) continue;
+      if (typeof response.serverVersion !== 'number') continue;
+
+      const localVersion = this.storage.getLocalVersion(response.rowId);
+      if (localVersion > 0 && localVersion !== response.serverVersion) {
+        const change = pendingChanges.find(c => c.rowId === response.rowId);
+        const clientData = change?.newData ?? {};
+
+        // 检测冲突字段：比对服务端返回的 serverData 与本地数据
+        const conflictFields = this.findConflictFields(clientData, {});
+
+        conflicts.push({
+          rowId: response.rowId,
+          localVersion,
+          serverVersion: response.serverVersion,
+          clientData,
+          serverData: {},
+          conflictType: 'modified',
+          conflictFields
+        });
+
+        console.log(`[OfflineService] Conflict detected for row ${response.rowId}: ` +
+          `local v${localVersion} vs server v${response.serverVersion}`);
+      }
+    }
+
     return conflicts;
   }
 
-  /** 应用冲突解决方案 */
-  private async applyConflictResolutions(
+  /** 找出哪些字段发生了冲突 */
+  private findConflictFields(
+    clientData: Record<string, unknown>,
+    serverData: Record<string, unknown>
+  ): string[] {
+    const fields: string[] = [];
+    const allKeys = new Set([...Object.keys(clientData), ...Object.keys(serverData)]);
+    for (const key of allKeys) {
+      if (JSON.stringify(clientData[key]) !== JSON.stringify(serverData[key])) {
+        fields.push(key);
+      }
+    }
+    return fields;
+  }
+
+  /** 根据策略解决冲突 */
+  private async resolveConflicts(conflicts: ConflictInfo[]): Promise<void> {
+    if (this.config.conflictStrategy === 'server_wins') {
+      await this.applyServerWinsStrategy(conflicts);
+    } else if (this.config.conflictStrategy === 'client_wins') {
+      // 保留本地数据，重新标记为待同步（已在主流程处理）
+      console.log(`[OfflineService] Client-wins: keeping local changes for ${conflicts.length} conflicts`);
+    } else if (this.config.conflictStrategy === 'manual' && this.config.conflictResolver) {
+      const resolutions = await this.config.conflictResolver(conflicts);
+      await this.applyManualResolutions(conflicts, resolutions);
+    }
+  }
+
+  /** 服务端优先策略：服务端数据覆盖本地 */
+  private async applyServerWinsStrategy(conflicts: ConflictInfo[]): Promise<void> {
+    for (const conflict of conflicts) {
+      if (Object.keys(conflict.serverData).length > 0) {
+        // 用服务端数据更新本地 DataStore
+        await this.datastore.updateRow(conflict.rowId, conflict.serverData as any);
+        // 用服务端版本号覆盖本地
+        this.storage.updateLocalVersions([{
+          rowId: conflict.rowId,
+          serverVersion: conflict.serverVersion
+        }]);
+        // 重新记录变更（下次 sync 上报）
+        await this.storage.logChange({
+          operationType: 'update',
+          rowId: conflict.rowId,
+          newData: conflict.serverData
+        });
+      }
+      console.log(`[OfflineService] Server-wins applied for row ${conflict.rowId}`);
+    }
+  }
+
+  /** 手动解决策略 */
+  private async applyManualResolutions(
     conflicts: ConflictInfo[],
     resolutions: Record<number, 'client' | 'server'>
   ): Promise<void> {
@@ -282,12 +411,12 @@ export class OfflineService {
           rowId: conflict.rowId,
           newData: conflict.clientData
         });
-      } else {
-        // 使用服务端数据，更新本地
-        const row = this.datastore.getRowById(conflict.rowId);
-        if (row) {
-          this.datastore.updateRow(conflict.rowId, conflict.serverData as any);
-        }
+      } else if (resolution === 'server') {
+        await this.datastore.updateRow(conflict.rowId, conflict.serverData as any);
+        this.storage.updateLocalVersions([{
+          rowId: conflict.rowId,
+          serverVersion: conflict.serverVersion
+        }]);
       }
     }
   }
@@ -295,10 +424,7 @@ export class OfflineService {
   /** 清除本地缓存 */
   async clearCache(): Promise<{ success: boolean; error?: string }> {
     const result = await this.storage.clear();
-    return {
-      success: result.success,
-      error: result.error
-    };
+    return { success: result.success, error: result.error };
   }
 
   /** 销毁服务 */

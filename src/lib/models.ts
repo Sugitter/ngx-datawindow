@@ -151,10 +151,16 @@ export interface TableConfig {
   
   /** 虚拟滚动配置 */
   virtualScroll?: {
-    /** 是否启用 */
+    /** 是否启用虚拟滚动 */
     enabled: boolean;
-    /** 行高（用于计算） */
-    rowHeight: number;
+    /** 估算行高（px），用于计算缓冲区大小 */
+    rowHeight?: number;
+    /** 缓冲区行数（上下各渲染多少额外行） */
+    bufferSize?: number;
+    /** 最小渲染行数 */
+    minBufferSize?: number;
+    /** 最大渲染行数（防止一次渲染过多） */
+    maxBufferSize?: number;
   };
   
   /** 响应式配置 */

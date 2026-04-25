@@ -3,19 +3,21 @@
  */
 
 // 模块
-export { DataTableModule } from './datatable.module';
+export { DataTableModule } from './lib/datatable.module';
 
 // 组件
-export { DataTableComponent } from './datatable.component';
+export { DataTableComponent } from './lib/datatable.component';
+export type {
+  ColumnFilterEvent, SortEvent, RowClickEvent, ToolbarEvent
+} from './lib/datatable.component';
 export type {
   ColumnConfig, TableConfig, TableState, ToolbarAction, RowAction,
-  ChangeEvent, ExportConfig, ColumnFilterEvent, SortEvent,
-  RowClickEvent, ToolbarEvent
-} from './models';
+  ChangeEvent, ExportConfig
+} from './lib/models';
 
 // 服务
-export { DataTableService } from './datatable.service';
-export type { DataTableOptions } from './datatable.service';
+export { DataTableService } from './lib/datatable.service';
+export type { DataTableOptions } from './lib/datatable.service';
 
 // DataStore 引擎
 export {
@@ -28,7 +30,7 @@ export {
   UpdateData, BufferStats, BufferType, RowStatus,
   DataRow, RawValue, RowId, RowNumber, FieldName,
   globalEngine, createDataStore
-} from './datastore';
+} from './lib/datastore';
 
 // 离线持久化（Phase 2）
 export {
@@ -42,4 +44,4 @@ export {
   type SyncCallback, type ConflictStrategy, type ConflictInfo,
   type ConflictResolver, type OfflineServiceConfig,
   type OfflineServiceEvents, type SyncResult
-} from './offline';
+} from './lib/offline';

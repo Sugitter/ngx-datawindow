@@ -39,12 +39,12 @@ const MATERIAL_MODULES = [
 ];
 
 @NgModule({
-  declarations: [DataTableComponent],
   imports: [
     CommonModule,
     ReactiveFormsModule,
     FormsModule,
     ...MATERIAL_MODULES,
+    DataTableComponent,
   ],
   exports: [DataTableComponent],
 })

@@ -73,7 +73,7 @@ export class DataTableService {
           children.push({
             field,
             operator: Array.isArray(value) ? 'in' : 'eq',
-            value,
+            value: value as RawValue,
           });
         }
       }
@@ -184,8 +184,8 @@ export class DataTableService {
     return this._ds.addRows(data);
   }
 
-  updateRow(rowId: RowId, data: Partial<Record<string, RawValue>>): boolean {
-    return this._ds.updateRow(rowId, data);
+  updateRow(rowId: RowId, data: Partial<Record<string, RawValue>>): Promise<boolean> {
+    return this._ds.updateRow(rowId, data).then(r => r.success);
   }
 
   deleteRow(rowId: RowId): boolean {
