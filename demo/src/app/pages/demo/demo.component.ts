@@ -1,6 +1,6 @@
 /**
  * 完整功能演示页面
- * 展示 ngx-datatable 所有功能
+ * 展示 ngx-datawindow 所有功能
  */
 import { Component, OnInit, ViewChild, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -29,7 +29,7 @@ import { ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig, AggregationF
         MatTabsModule, MatCardModule, MatButtonModule, MatIconModule,
         MatDividerModule, MatChipsModule, MatBadgeModule, MatSnackBarModule,
         MatDialogModule, MatTooltipModule, MatFormFieldModule, MatInputModule,
-        MatSelectModule,
+        MatSelectModule, DataTableComponent,
     ],
     template: `
     <!-- 功能演示导航 -->
@@ -129,7 +129,7 @@ import { ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig, AggregationF
         }
 
         <!-- 表格 -->
-        <ngx-datatable
+        <ngx-datawindow
           #basicTable
           [datastoreConfig]="employeeConfig"
           [columns]="employeeColumns"
@@ -141,7 +141,7 @@ import { ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig, AggregationF
           (toolbarAction)="onToolbarAction($event)"
           (rowClicked)="onRowClicked($event)"
           (selectionChanged)="onSelectionChanged($event)">
-        </ngx-datatable>
+        </ngx-datawindow>
       </div>
     }
 
@@ -176,13 +176,13 @@ import { ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig, AggregationF
           </div>
         </div>
 
-        <ngx-datatable
+        <ngx-datawindow
           #virtualTable
           [datastoreConfig]="orderConfig"
           [columns]="orderColumns"
           [data]="orderData"
           [tableConfig]="orderTableConfig">
-        </ngx-datatable>
+        </ngx-datawindow>
 
         <!-- 虚拟列说明 -->
         <div class="feature-note">
@@ -226,13 +226,13 @@ import { ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig, AggregationF
           </div>
         </div>
 
-        <ngx-datatable
+        <ngx-datawindow
           #filterTable
           [datastoreConfig]="salesConfig"
           [columns]="salesColumns"
           [data]="salesData"
           [tableConfig]="salesTableConfig">
-        </ngx-datatable>
+        </ngx-datawindow>
 
         <!-- 过滤说明 -->
         <div class="feature-note">
@@ -292,13 +292,13 @@ import { ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig, AggregationF
           </div>
         }
 
-        <ngx-datatable
+        <ngx-datawindow
           #aggTable
           [datastoreConfig]="salesConfig"
           [columns]="salesAggColumns"
           [data]="salesData"
           [tableConfig]="salesTableConfig">
-        </ngx-datatable>
+        </ngx-datawindow>
       </div>
     }
 
@@ -349,13 +349,13 @@ import { ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig, AggregationF
           </div>
         </div>
 
-        <ngx-datatable
+        <ngx-datawindow
           #rowOpsTable
           [datastoreConfig]="employeeConfig"
           [columns]="employeeColumns"
           [data]="employeeData"
           [tableConfig]="rowOpsTableConfig">
-        </ngx-datatable>
+        </ngx-datawindow>
 
         <!-- 功能说明 -->
         <div class="feature-note">
@@ -382,14 +382,14 @@ import { ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig, AggregationF
           <p class="section-desc">展示所有配置选项的组合使用，包括自定义工具栏按钮、响应式列等</p>
         </div>
 
-        <ngx-datatable
+        <ngx-datawindow
           #fullConfigTable
           [datastoreConfig]="fullConfigDataStore"
           [columns]="fullConfigColumns"
           [data]="fullConfigData"
           [tableConfig]="fullConfigTableConfig"
           (toolbarAction)="onFullConfigAction($event)">
-        </ngx-datatable>
+        </ngx-datawindow>
 
         <!-- 配置代码展示 -->
         <mat-card class="config-code-card">
@@ -784,7 +784,7 @@ export class DemoComponent implements OnInit {
     },
   };
 
-  employeeData: Record<string, unknown>[] = [];
+  employeeData: Record<string, RawValue>[] = [];
 
   // ── Tab 2: 虚拟计算列 ────────────────────────────────────────────────────
 
@@ -861,7 +861,7 @@ export class DemoComponent implements OnInit {
     pagination: { pageSizeOptions: [10, 25, 50], defaultPageSize: 10 },
   };
 
-  orderData: Record<string, unknown>[] = [];
+  orderData: Record<string, RawValue>[] = [];
 
   // ── Tab 3: 过滤与搜索 ────────────────────────────────────────────────────
 
@@ -930,7 +930,7 @@ export class DemoComponent implements OnInit {
     pagination: { pageSizeOptions: [10, 25, 50, 100], defaultPageSize: 10 },
   };
 
-  salesData: Record<string, unknown>[] = [];
+  salesData: Record<string, RawValue>[] = [];
 
   // ── Tab 5: 行操作 ────────────────────────────────────────────────────────
 
@@ -1001,7 +1001,7 @@ export class DemoComponent implements OnInit {
     },
   };
 
-  fullConfigData: Record<string, unknown>[] = [];
+  fullConfigData: Record<string, RawValue>[] = [];
 
   // ── 配置代码展示 ─────────────────────────────────────────────────────────
 
@@ -1307,12 +1307,12 @@ export class DemoComponent implements OnInit {
     this.updateStats();
   }
 
-  onToolbarAction(event: ToolbarAction): void {
+  onToolbarAction(event: ToolbarEvent): void {
     console.log('工具栏操作:', event);
-    if (event.type === 'add') {
+    if (event.action.type === 'add') {
       this.showSnackBar('点击了新增按钮');
-    } else if (event.type === 'custom' && event.id) {
-      this.showSnackBar(`自定义操作: ${event.id}`);
+    } else if (event.action.type === 'custom' && event.action.id) {
+      this.showSnackBar(`自定义操作: ${event.action.id}`);
     }
   }
 

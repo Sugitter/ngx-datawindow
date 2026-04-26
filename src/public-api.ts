@@ -1,5 +1,5 @@
 /**
- * ngx-datatable 公共 API
+ * ngx-datawindow 公共 API
  */
 
 // 模块

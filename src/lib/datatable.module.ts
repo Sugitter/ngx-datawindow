@@ -1,5 +1,5 @@
 /**
- * ngx-datatable 模块
+ * ngx-datawindow 模块
  */
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';

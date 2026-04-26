@@ -7,9 +7,11 @@
 
 html, body {
   height: 100%;
-  font-family: 'Roboto', 'Helvetica Neue', sans-serif;
+  font-family: 'Inter', 'Roboto', 'Helvetica Neue', sans-serif;
   background: #f5f5f5;
   color: rgba(0, 0, 0, 0.87);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
@@ -23,7 +25,7 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -33,6 +35,12 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* Material Icons */
+.material-icons {
+  width: 1em;
+  direction: rtl;
 }
 
 /* Utility classes */
@@ -50,3 +58,8 @@ body {
 .p-1 { padding: 8px; }
 .p-2 { padding: 16px; }
 .p-3 { padding: 24px; }
+
+/* Code blocks */
+pre, code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}

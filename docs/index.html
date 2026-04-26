@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ngx-datawindow - Angular DataWindow Component</title>
+  <meta name="description" content="Inspired by PowerBuilder DataWindow, a powerful Angular table component with DataStore engine, virtual computed columns, column-level change tracking, and offline persistence.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary: #1976d2;
+      --primary-light: #42a5f5;
+      --primary-dark: #0d47a1;
+      --accent: #00d4aa;
+      --bg-dark: #0d1117;
+      --bg-card: #161b22;
+      --bg-code: #1a1a2e;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --border: #30363d;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+    a { color: var(--primary-light); text-decoration: none; }
+    a:hover { color: var(--accent); }
+    
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: rgba(13, 17, 23, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 20px;
+    }
+    .nav-logo span { font-size: 28px; }
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .nav-links a { color: var(--text-secondary); transition: color 0.2s; }
+    .nav-links a:hover { color: var(--text-primary); }
+    
+    /* Hero Section */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1a1a2e 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 30% 50%, rgba(25, 118, 210, 0.1) 0%, transparent 50%),
+                  radial-gradient(circle at 70% 80%, rgba(0, 212, 170, 0.08) 0%, transparent 40%);
+      animation: pulse 15s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(-5%, 5%) scale(1.1); }
+    }
+    .hero-content { position: relative; z-index: 1; max-width: 800px; }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(25, 118, 210, 0.15);
+      border: 1px solid rgba(25, 118, 210, 0.3);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--primary-light);
+      margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-size: clamp(40px, 8vw, 72px);
+      font-weight: 800;
+      letter-spacing: -2px;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, #fff 0%, var(--primary-light) 50%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      font-size: 20px;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin: 0 auto 40px;
+    }
+    .hero-buttons {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(25, 118, 210, 0.4);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 30px rgba(25, 118, 210, 0.5);
+    }
+    .btn-secondary {
+      background: transparent;
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover {
+      background: var(--bg-card);
+      border-color: var(--primary);
+    }
+    
+    /* Section */
+    section {
+      padding: 100px 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .section-title {
+      font-size: 36px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .section-subtitle {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 18px;
+      margin-bottom: 60px;
+    }
+    
+    /* Features Grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+    }
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      transition: all 0.3s;
+    }
+    .feature-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--primary);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+    }
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    .feature-card h3 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .feature-card p {
+      color: var(--text-secondary);
+      font-size: 15px;
+    }
+    
+    /* Quick Start */
+    .quick-start {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      margin-top: 40px;
+    }
+    .code-block {
+      background: var(--bg-code);
+      border-radius: 8px;
+      padding: 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      overflow-x: auto;
+      margin-top: 20px;
+      border: 1px solid var(--border);
+    }
+    .code-block .comment { color: #6a9955; }
+    .code-block .keyword { color: #569cd6; }
+    .code-block .string { color: #ce9178; }
+    .code-block .function { color: #dcdcaa; }
+    
+    /* Comparison Table */
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 40px;
+      background: var(--bg-card);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .comparison-table th, .comparison-table td {
+      padding: 16px 24px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .comparison-table th {
+      background: var(--bg-code);
+      font-weight: 600;
+    }
+    .comparison-table tr:last-child td { border-bottom: none; }
+    .comparison-table td:first-child { font-weight: 500; }
+    .check { color: var(--accent); }
+    
+    /* Stats */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 24px;
+      margin-top: 60px;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 48px;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--primary-light) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .stat-label {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-top: 8px;
+    }
+    
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 24px;
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    footer a { margin: 0 16px; }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .hero { padding: 100px 16px 60px; }
+      .hero h1 { font-size: 36px; letter-spacing: -1px; }
+      .hero p { font-size: 16px; }
+      section { padding: 60px 16px; }
+      .section-title { font-size: 28px; }
+      .comparison-table { font-size: 13px; }
+      .comparison-table th, .comparison-table td { padding: 12px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation -->
+  <nav>
+    <div class="nav-logo">
+      <span>📊</span>
+      ngx-datawindow
+    </div>
+    <div class="nav-links">
+      <a href="#features">特性</a>
+      <a href="#quickstart">快速开始</a>
+      <a href="#comparison">对比</a>
+      <a href="https://github.com/ailex2016/ngx-datawindow" target="_blank">GitHub</a>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <div class="hero">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span>✨</span> Angular 17+ 支持
+      </div>
+      <h1>ngx-datawindow</h1>
+      <p>借鉴 PowerBuilder DataWindow 设计哲学的 Angular 表格组件 — DataStore 数据引擎、虚拟计算列、列级变更跟踪、离线持久化</p>
+      <div class="hero-buttons">
+        <a href="#quickstart" class="btn btn-primary">
+          <span>🚀</span> 快速开始
+        </a>
+        <a href="https://github.com/ailex2016/ngx-datawindow" target="_blank" class="btn btn-secondary">
+          <span>📦</span> GitHub
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features Section -->
+  <section id="features">
+    <h2 class="section-title">核心特性</h2>
+    <p class="section-subtitle">企业级表格组件应有的能力</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🗄️</div>
+        <h3>DataStore 数据引擎</h3>
+        <p>三缓冲区架构（Main/Filtered/Deleted），行级状态管理（new/normal/modified/deleted），完整的 CRUD 操作和事件链</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔢</div>
+        <h3>虚拟计算列</h3>
+        <p>声明式 formula 定义，支持四则运算和条件表达式，修改源列自动联动重算，虚拟列不存储只计算</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📝</div>
+        <h3>列级变更跟踪</h3>
+        <p>精确到字段级别的 oldValue/newValue 追踪，FieldChangeHistory 完整记录，支持差异更新生成</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📴</div>
+        <h3>离线优先架构</h3>
+        <p>IndexedDB 持久化，Online/Offline 自动切换，乐观锁冲突检测（server_wins/client_wins/manual 三策略）</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>聚合统计</h3>
+        <p>支持 sum/avg/count/min/max/distinct 等聚合类型，按字段分组聚合，列头聚合标签显示</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎨</div>
+        <h3>Angular Material 集成</h3>
+        <p>基于 MatTable 二次封装，完整的工具栏/分页/排序/过滤，内联编辑 + 行选择</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick Start Section -->
+  <section id="quickstart">
+    <h2 class="section-title">快速开始</h2>
+    <p class="section-subtitle">三步完成集成</p>
+    <div class="quick-start">
+      <h3>安装</h3>
+      <div class="code-block">
+        <span class="keyword">npm</span> install ngx-datawindow
+      </div>
+      
+      <h3 style="margin-top: 32px;">导入模块</h3>
+      <div class="code-block">
+<span class="keyword">import</span> { DataTableModule } <span class="keyword">from</span> <span class="string">'ngx-datawindow'</span>;
+
+<span class="keyword">@NgModule</span>({
+  imports: [DataTableModule]
+})
+<span class="keyword">export class</span> <span class="function">AppModule</span> {}
+      </div>
+      
+      <h3 style="margin-top: 32px;">使用组件</h3>
+      <div class="code-block">
+<span class="comment">&lt;!-- 最简使用 --&gt;</span>
+&lt;<span class="keyword">ngx-datawindow</span>
+  [<span class="keyword">columns</span>]="columns"
+  [<span class="keyword">data</span>]="data"
+  [<span class="keyword">tableConfig</span>]="config"&gt;
+&lt;/<span class="keyword">ngx-datawindow</span>&gt;
+      </div>
+    </div>
+  </section>
+
+  <!-- Comparison Section -->
+  <section id="comparison">
+    <h2 class="section-title">与 PowerBuilder DataWindow 对比</h2>
+    <p class="section-subtitle">30 年设计哲学的现代实现</p>
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>特性</th>
+          <th>PowerBuilder DataWindow</th>
+          <th>ngx-datawindow</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>运行平台</td>
+          <td>Windows 桌面</td>
+          <td>Web (Angular)</td>
+        </tr>
+        <tr>
+          <td>数据缓冲区</td>
+          <td>Primary/Filter/Delete</td>
+          <td>Main/Filtered/Deleted</td>
+        </tr>
+        <tr>
+          <td>虚拟列</td>
+          <td>Computed Column</td>
+          <td>Virtual Column (formula)</td>
+        </tr>
+        <tr>
+          <td>变更状态</td>
+          <td>DataWindow buffers</td>
+          <td>RowStatus (new/modified/deleted)</td>
+        </tr>
+        <tr>
+          <td>数据校验</td>
+          <td>ItemChanged 事件</td>
+          <td>FieldDefinition.validate</td>
+        </tr>
+        <tr>
+          <td>撤销操作</td>
+          <td>Undo/Redo</td>
+          <td>UndoStack (Command Pattern)</td>
+        </tr>
+        <tr>
+          <td>离线存储</td>
+          <td>❌ 无</td>
+          <td><span class="check">✅ IndexedDB</span></td>
+        </tr>
+        <tr>
+          <td>冲突检测</td>
+          <td>❌ 无</td>
+          <td><span class="check">✅ 乐观锁 (3 策略)</span></td>
+        </tr>
+        <tr>
+          <td>开源免费</td>
+          <td>❌ 商业软件</td>
+          <td><span class="check">✅ MIT License</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Stats Section -->
+  <section>
+    <h2 class="section-title">项目状态</h2>
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-value">51</div>
+        <div class="stat-label">测试用例全通过</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">750ms</div>
+        <div class="stat-label">1000行写入性能</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">10ms</div>
+        <div class="stat-label">1000行读取性能</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">~50KB</div>
+        <div class="stat-label">DataStore 引擎体积</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>
+      <a href="https://github.com/ailex2016/ngx-datawindow" target="_blank">GitHub</a>
+      <a href="https://github.com/ailex2016/ngx-datawindow/blob/main/README.md" target="_blank">文档</a>
+      <a href="https://github.com/ailex2016/ngx-datawindow/issues" target="_blank">Issue</a>
+    </p>
+    <p style="margin-top: 16px;">MIT License © 2026 ngx-datawindow</p>
+  </footer>
+</body>
+</html>

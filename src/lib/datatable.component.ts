@@ -40,7 +40,7 @@ export interface RowClickEvent { row: DataRow; event: MouseEvent; }
 export interface ToolbarEvent { action: ToolbarAction; }
 
 @Component({
-  selector: 'ngx-datatable',
+  selector: 'ngx-datawindow',
   standalone: true,
   imports: [
     CommonModule, FormsModule,
@@ -50,21 +50,20 @@ export interface ToolbarEvent { action: ToolbarAction; }
     MatTooltipModule, MatSnackBarModule, MatDialogModule,
     ScrollingModule, MatMenuModule, MatProgressSpinnerModule,
   ],
-  providers: [DataTableService],
   template: `
     <div class="dt-container" [class.dt-loading]="loading()">
       <!-- 标题栏 -->
-      @if (config()?.showTitle !== false && config()?.title) {
+      @if (config().showTitle !== false && config().title) {
         <div class="dt-title-bar">
-          <span class="dt-title">{{ config()?.title }}</span>
+          <span class="dt-title">{{ config().title }}</span>
         </div>
       }
 
       <!-- 工具栏 -->
-      @if (config()?.showToolbar !== false) {
+      @if (config().showToolbar !== false) {
         <div class="dt-toolbar">
           <!-- 全局搜索 -->
-          @if (config()?.showGlobalSearch !== false) {
+          @if (config().showGlobalSearch !== false) {
             <mat-form-field appearance="outline" class="dt-search">
               <mat-label>搜索</mat-label>
               <input matInput [value]="searchQuery()"
@@ -134,7 +133,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
       }
 
       <!-- 列过滤行 -->
-      @if (config()?.showColumnFilter) {
+      @if (config().showColumnFilter) {
         <div class="dt-column-filters">
           @for (col of visibleColumns(); track col.field) {
             @if (col.filterable !== false) {
@@ -248,14 +247,14 @@ export interface ToolbarEvent { action: ToolbarAction; }
                 [class.dt-row-new]="row.status === 'new'"
                 [class.dt-row-modified]="row.status === 'modified'"
                 [class.dt-row-deleted]="row.status === 'deleted'"
-                [class.dt-clickable]="config()?.rowClick"
+                [class.dt-clickable]="config().rowClick"
                 (click)="onRowClick(row, $event)"
                 (dblclick)="onRowDoubleClick(row, $event)">
               </tr>
 
               <tr class="mat-row" *matNoDataRow>
                 <td class="mat-cell dt-empty" [attr.colspan]="displayedColumns().length">
-                  {{ config()?.emptyMessage || '暂无数据' }}
+                  {{ config().emptyMessage || '暂无数据' }}
                 </td>
               </tr>
             </table>
@@ -336,7 +335,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
             [class.dt-row-new]="row.status === 'new'"
             [class.dt-row-modified]="row.status === 'modified'"
             [class.dt-row-deleted]="row.status === 'deleted'"
-            [class.dt-clickable]="config()?.rowClick"
+            [class.dt-clickable]="config().rowClick"
             (click)="onRowClick(row, $event)"
             (dblclick)="onRowDoubleClick(row, $event)">
           </tr>
@@ -344,7 +343,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
           <!-- 空状态 -->
           <tr class="mat-row" *matNoDataRow>
             <td class="mat-cell dt-empty" [attr.colspan]="displayedColumns().length">
-              {{ config()?.emptyMessage || '暂无数据' }}
+              {{ config().emptyMessage || '暂无数据' }}
             </td>
           </tr>
         </table>
@@ -352,7 +351,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
       </div>
 
       <!-- 分页器 -->
-      @if (config()?.showPaginator !== false) {
+      @if (config().showPaginator !== false) {
         <mat-paginator
           [pageIndex]="pageIndex()"
           [pageSize]="pageSize()"
@@ -366,7 +365,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
       @if (loading()) {
         <div class="dt-overlay">
           <mat-progress-spinner diameter="40"></mat-progress-spinner>
-          <span>{{ config()?.loadingMessage || '加载中...' }}</span>
+          <span>{{ config().loadingMessage || '加载中...' }}</span>
         </div>
       }
     </div>
@@ -554,7 +553,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
 })
 export class DataTableComponent implements OnInit, OnChanges {
   private _service = inject(DataTableService);
-  private _snackBar = inject(MatSnackBar);
+  private _snackBar = inject(MatSnackBar, { optional: true });
 
   // ── 输入 ──────────────────────────────────────────────────────────────────
 
@@ -714,14 +713,14 @@ export class DataTableComponent implements OnInit, OnChanges {
 
   onDeleteSelected(): void {
     const count = this._service.deleteSelected();
-    this._snackBar.open(`已删除 ${count} 行`, '关闭', { duration: 2000 });
+    this._snackBar?.open(`已删除 ${count} 行`, '关闭', { duration: 2000 });
     this.toolbarAction.emit({ action: { type: 'delete' } });
   }
 
   onRefresh(): void {
     this._service.reset();
     this._service.setData([]);
-    this._snackBar.open('已刷新', '', { duration: 1000 });
+    this._snackBar?.open('已刷新', '', { duration: 1000 });
     this.toolbarAction.emit({ action: { type: 'refresh' } });
   }
 
@@ -879,8 +878,8 @@ export class DataTableComponent implements OnInit, OnChanges {
 
   // ── 辅助 ──────────────────────────────────────────────────────────────────
 
-  getActionLabel(action: boolean | { label?: string }, fallback: string): string {
-    if (typeof action === 'object') return action.label ?? fallback;
+  getActionLabel(action: boolean | { icon?: string; label?: string } | undefined, fallback: string): string {
+    if (typeof action === 'object' && action) return action.label ?? fallback;
     return fallback;
   }
 
