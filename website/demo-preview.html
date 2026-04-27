@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ngx-datawindow Demo Preview</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #f0f2f5;
+    padding: 40px 20px;
+    color: #333;
+  }
+  h1 {
+    text-align: center;
+    font-size: 28px;
+    color: #1a1a2e;
+    margin-bottom: 8px;
+  }
+  .subtitle {
+    text-align: center;
+    color: #666;
+    margin-bottom: 40px;
+    font-size: 14px;
+  }
+  .demo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(520px, 1fr));
+    gap: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .demo-card {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+  .card-header {
+    background: linear-gradient(135deg, #1976d2, #2196f3);
+    color: #fff;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card-header mat-icon {
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+  }
+  .card-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .card-header .badge {
+    margin-left: auto;
+    background: rgba(255,255,255,0.25);
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+  }
+
+  /* Table styles */
+  .table-wrap {
+    overflow: auto;
+    max-height: 320px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  th {
+    background: #fafafa;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    color: rgba(0,0,0,0.87);
+    border-bottom: 2px solid #e0e0e0;
+    white-space: nowrap;
+  }
+  th.right { text-align: right; }
+  td {
+    padding: 9px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #333;
+  }
+  td.right { text-align: right; }
+  tr:hover td { background: #f5f5f5; }
+  .row-new td { background: #e8f5e9 !important; }
+  .row-modified td { background: #fff8e1 !important; }
+  .row-deleted td { background: #ffebee !important; opacity: 0.7; }
+  .row-selected td { background: #e3f2fd !important; }
+
+  /* Filter bar */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #f5f5f5;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .filter-input {
+    flex: 1;
+    min-width: 80px;
+    padding: 5px 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 12px;
+    background: #fff;
+  }
+  select.filter-input {
+    cursor: pointer;
+    min-width: 80px;
+    flex: 0;
+  }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e0e0e0;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .toolbar-search {
+    width: 240px;
+    padding: 7px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 13px;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'%3E%3Cpath fill='%23999' d='M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E") no-repeat 8px center;
+    padding-left: 34px;
+  }
+  .btn {
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid transparent;
+  }
+  .btn-primary {
+    background: #1976d2;
+    color: #fff;
+  }
+  .btn-outline {
+    background: #fff;
+    border-color: #e0e0e0;
+    color: #666;
+  }
+  .btn-outline.warn {
+    border-color: #f44336;
+    color: #f44336;
+  }
+  .btn-icon {
+    padding: 7px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .badge-count {
+    background: #f44336;
+    color: #fff;
+    border-radius: 10px;
+    padding: 1px 6px;
+    font-size: 11px;
+    margin-left: 4px;
+  }
+
+  /* Paginator */
+  .paginator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-top: 1px solid #e0e0e0;
+    font-size: 13px;
+    color: #666;
+    justify-content: flex-end;
+  }
+  .paginator select {
+    padding: 4px 8px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  /* Status badge */
+  .status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .status-new { background: #e8f5e9; color: #2e7d32; }
+  .status-modified { background: #fff8e1; color: #f57f17; }
+  .status-deleted { background: #ffebee; color: #c62828; }
+  .status-pending { background: #fff3e0; color: #e65100; }
+  .status-completed { background: #e8f5e9; color: #2e7d32; }
+  .status-processing { background: #e3f2fd; color: #1565c0; }
+  .status-cancelled { background: #f5f5f5; color: #9e9e9e; }
+
+  /* Virtual column highlight */
+  .col-virtual {
+    color: #9c27b0;
+    font-style: italic;
+  }
+
+  /* Profit cell */
+  .profit-positive { color: #2e7d32; font-weight: 600; }
+  .profit-negative { color: #c62828; font-weight: 600; }
+
+  /* Action buttons */
+  .action-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .action-btn {
+    width: 28px;
+    height: 28px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #666;
+  }
+  .action-btn:hover { background: #f5f5f5; }
+  .action-btn.danger:hover { background: #ffebee; color: #f44336; border-color: #f44336; }
+  .action-btn.restore { background: #e3f2fd; color: #1976d2; border-color: #1976d2; }
+  .restore-btn {
+    padding: 3px 10px;
+    background: #e3f2fd;
+    color: #1976d2;
+    border: 1px solid #1976d2;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  /* Checkbox */
+  .cb { width: 16px; height: 16px; cursor: pointer; accent-color: #1976d2; }
+
+  /* Aggregation bar */
+  .agg-bar {
+    display: flex;
+    gap: 12px;
+    padding: 10px 16px;
+    background: #e3f2fd;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 13px;
+    flex-wrap: wrap;
+  }
+  .agg-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .agg-label { color: #1565c0; }
+  .agg-value { font-weight: 700; color: #0d47a1; }
+
+  /* Buffer stats */
+  .buffer-stats {
+    display: flex;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #fafafa;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .stat-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 13px;
+  }
+  .stat-chip .num { font-weight: 700; font-size: 15px; }
+  .stat-chip.blue .num { color: #1976d2; }
+  .stat-chip.orange .num { color: #ff9800; }
+  .stat-chip.red .num { color: #f44336; }
+
+  /* Tab nav (for preview page) */
+  .tab-nav {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #fff;
+    border-bottom: 1px solid #e0e0e0;
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    padding: 8px 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    color: #666;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .tab-btn.active {
+    background: #1976d2;
+    color: #fff;
+    border-color: #1976d2;
+  }
+
+  /* Note box */
+  .note-box {
+    margin: 0;
+    padding: 12px 16px;
+    background: #e3f2fd;
+    font-size: 12px;
+    color: #0d47a1;
+    border-top: 1px solid #e0e0e0;
+  }
+
+  /* Diff panel */
+  .diff-panel {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 16px;
+    background: #e8f5e9;
+    font-size: 13px;
+    border-top: 1px solid #e0e0e0;
+  }
+  .diff-badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+  }
+  .diff-new { background: #4caf50; }
+  .diff-modified { background: #ff9800; }
+  .diff-deleted { background: #f44336; }
+
+  /* Validation alert */
+  .validation-alert {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 10px 16px;
+    background: #fff3e0;
+    font-size: 13px;
+    color: #e65100;
+    border-top: 1px solid #e0e0e0;
+  }
+
+  /* Card footer */
+  .card-footer {
+    padding: 12px 16px;
+    background: #fafafa;
+    border-top: 1px solid #e0e0e0;
+    font-size: 12px;
+    color: #999;
+  }
+</style>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+
+<h1>ngx-datawindow 功能演示</h1>
+<p class="subtitle">基于 Angular + DataWindow 设计哲学的表格组件 · 访问 <strong>http://localhost:4200</strong> 查看完整交互演示</p>
+
+<div class="demo-grid">
+
+  <!-- ================================================================ -->
+  <!-- Tab 1: 基础增删改查 -->
+  <!-- ================================================================ -->
+  <div class="demo-card">
+    <div class="card-header">
+      <span class="material-icons">table_chart</span>
+      <h3>基础增删改查</h3>
+      <span class="badge">核心功能</span>
+    </div>
+
+    <div class="toolbar">
+      <input class="toolbar-search" placeholder="全局搜索..." value="">
+      <div style="flex:1"></div>
+      <button class="btn btn-primary"><span class="material-icons" style="font-size:16px">person_add</span> 新增</button>
+      <button class="btn btn-outline warn"><span class="material-icons" style="font-size:16px">delete_sweep</span> 删除<span class="badge-count">2</span></button>
+      <button class="btn btn-outline"><span class="material-icons" style="font-size:16px">refresh</span></button>
+      <button class="btn-icon" title="导出"><span class="material-icons" style="font-size:18px">download</span></button>
+    </div>
+
+    <div class="filter-bar">
+      <input class="filter-input" placeholder="姓名" value="">
+      <select class="filter-input">
+        <option>全部部门</option>
+        <option>技术部</option>
+        <option>销售部</option>
+        <option>财务部</option>
+      </select>
+      <input class="filter-input" placeholder="职位" value="">
+      <input class="filter-input" placeholder="邮箱" value="">
+      <input class="filter-input" placeholder="月薪" value="">
+      <input class="filter-input" placeholder="入职日期" value="">
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:36px"><input type="checkbox" class="cb" checked></th>
+            <th>ID</th>
+            <th>姓名 ↕</th>
+            <th>部门 ↕</th>
+            <th>职位</th>
+            <th>邮箱</th>
+            <th class="right">月薪</th>
+            <th>在职</th>
+            <th style="width:100px">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="row-new">
+            <td><input type="checkbox" class="cb"></td>
+            <td>16</td>
+            <td><b>新员工</b></td>
+            <td>技术部</td>
+            <td>工程师</td>
+            <td>new@example.com</td>
+            <td class="right">15,000</td>
+            <td>✓</td>
+            <td class="action-btns">
+              <button class="action-btn danger"><span class="material-icons" style="font-size:15px">delete</span></button>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="cb" checked></td>
+            <td>1</td>
+            <td>张三</td>
+            <td>技术部</td>
+            <td>高级工程师</td>
+            <td>zhangsan@example.com</td>
+            <td class="right">25,000</td>
+            <td>✓</td>
+            <td class="action-btns">
+              <button class="action-btn"><span class="material-icons" style="font-size:15px">edit</span></button>
+              <button class="action-btn danger"><span class="material-icons" style="font-size:15px">delete</span></button>
+            </td>
+          </tr>
+          <tr class="row-selected">
+            <td><input type="checkbox" class="cb" checked></td>
+            <td>3</td>
+            <td>王五</td>
+            <td>技术部</td>
+            <td>架构师</td>
+            <td>wangwu@example.com</td>
+            <td class="right">35,000</td>
+            <td>✓</td>
+            <td class="action-btns">
+              <button class="action-btn"><span class="material-icons" style="font-size:15px">edit</span></button>
+              <button class="action-btn danger"><span class="material-icons" style="font-size:15px">delete</span></button>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="cb"></td>
+            <td>2</td>
+            <td>李四</td>
+            <td>销售部</td>
+            <td>销售经理</td>
+            <td>lisi@example.com</td>
+            <td class="right">18,000</td>
+            <td>✓</td>
+            <td class="action-btns">
+              <button class="action-btn"><span class="material-icons" style="font-size:15px">edit</span></button>
+              <button class="action-btn danger"><span class="material-icons" style="font-size:15px">delete</span></button>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="cb"></td>
+            <td>6</td>
+            <td>孙八</td>
+            <td>技术部</td>
+            <td>前端工程师</td>
+            <td>sunba@example.com</td>
+            <td class="right">20,000</td>
+            <td>✓</td>
+            <td class="action-btns">
+              <button class="action-btn"><span class="material-icons" style="font-size:15px">edit</span></button>
+              <button class="action-btn danger"><span class="material-icons" style="font-size:15px">delete</span></button>
+            </td>
+          </tr>
+          <tr class="row-deleted">
+            <td><input type="checkbox" class="cb"></td>
+            <td>4</td>
+            <td>赵六</td>
+            <td>财务部</td>
+            <td>财务主管</td>
+            <td>zhaoliu@example.com</td>
+            <td class="right">22,000</td>
+            <td>✗</td>
+            <td><button class="restore-btn">恢复</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="diff-panel">
+      <strong>差异更新 (3条)：</strong>
+      <span class="diff-badge diff-new">new</span>
+      <span class="diff-badge diff-modified">modified</span>
+      <span class="diff-badge diff-deleted">deleted</span>
+      <button class="btn btn-primary" style="margin-left:8px;padding:4px 12px;font-size:12px">提交变更</button>
+    </div>
+
+    <div class="paginator">
+      共 15 条
+      <select><option>10 条/页</option></select>
+      <span>&laquo; &lsaquo; 1 2 &rsaquo; &raquo;</span>
+    </div>
+
+    <div class="note-box">
+      <strong>功能说明：</strong>增删改查、全局搜索、列过滤、多选、差异更新、CSV/JSON 导出、校验
+    </div>
+  </div>
+
+  <!-- ================================================================ -->
+  <!-- Tab 2: 虚拟计算列 -->
+  <!-- ================================================================ -->
+  <div class="demo-card">
+    <div class="card-header">
+      <span class="material-icons">functions</span>
+      <h3>虚拟计算列</h3>
+      <span class="badge">JS 公式</span>
+    </div>
+
+    <div class="toolbar">
+      <input class="toolbar-search" placeholder="搜索产品..." value="">
+      <div style="flex:1"></div>
+      <button class="btn btn-primary"><span class="material-icons" style="font-size:16px">add_shopping_cart</span> 新增订单</button>
+    </div>
+
+    <div class="agg-bar">
+      <div class="agg-item"><span class="agg-label">总实付：</span><span class="agg-value">¥ 91,432.00</span></div>
+      <div class="agg-item"><span class="agg-label">总利润：</span><span class="agg-value">¥ 31,232.00</span></div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:36px"><input type="checkbox" class="cb"></th>
+            <th>订单号</th>
+            <th>产品</th>
+            <th class="right">数量</th>
+            <th class="right">单价</th>
+            <th class="right">折扣</th>
+            <th class="right">成本</th>
+            <th class="right col-virtual">小计</th>
+            <th class="right col-virtual">实付金额</th>
+            <th class="right col-virtual">利润</th>
+            <th>状态</th>
+            <th style="width:80px">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><input type="checkbox" class="cb"></td>
+            <td>1001</td>
+            <td>iPhone 15 Pro Max</td>
+            <td class="right">2</td>
+            <td class="right">9,999</td>
+            <td class="right">5%</td>
+            <td class="right">7,500</td>
+            <td class="right col-virtual">19,998</td>
+            <td class="right col-virtual">18,998.10</td>
+            <td class="right col-virtual profit-positive">11,498.10</td>
+            <td><span class="status-badge status-completed">已完成</span></td>
+            <td class="action-btns">
+              <button class="action-btn"><span class="material-icons" style="font-size:15px">edit</span></button>
+              <button class="action-btn danger"><span class="material-icons" style="font-size:15px">delete</span></button>
+            </td>
+          </tr>
+          <tr class="row-modified">
+            <td><input type="checkbox" class="cb"></td>
+            <td>1002</td>
+            <td>MacBook Pro 14"</td>
+            <td class="right">1</td>
+            <td class="right">19,999</td>
+            <td class="right">0%</td>
+            <td class="right">15,000</td>
+            <td class="right col-virtual">19,999</td>
+            <td class="right col-virtual">19,999.00</td>
+            <td class="right col-virtual profit-positive">4,999.00</td>
+            <td><span class="status-badge status-processing">处理中</span></td>
+            <td class="action-btns">
+              <button class="action-btn"><span class="material-icons" style="font-size:15px">edit</span></button>
+              <button class="action-btn danger"><span class="material-icons" style="font-size:15px">delete</span></button>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="cb"></td>
+            <td>1003</td>
+            <td>AirPods Pro 2</td>
+            <td class="right">5</td>
+            <td class="right">1,899</td>
+            <td class="right">10%</td>
+            <td class="right">1,200</td>
+            <td class="right col-virtual">9,495</td>
+            <td class="right col-virtual">8,545.50</td>
+            <td class="right col-virtual profit-positive">2,545.50</td>
+            <td><span class="status-badge status-completed">已完成</span></td>
+            <td class="action-btns">
+              <button class="action-btn"><span class="material-icons" style="font-size:15px">edit</span></button>
+              <button class="action-btn danger"><span class="material-icons" style="font-size:15px">delete</span></button>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="cb"></td>
+            <td>1006</td>
+            <td>Sony WH-1000XM5</td>
+            <td class="right">4</td>
+            <td class="right">2,499</td>
+            <td class="right">15%</td>
+            <td class="right">1,500</td>
+            <td class="right col-virtual">9,996</td>
+            <td class="right col-virtual">8,496.60</td>
+            <td class="right col-virtual profit-positive">2,496.60</td>
+            <td><span class="status-badge status-completed">已完成</span></td>
+            <td class="action-btns">
+              <button class="action-btn"><span class="material-icons" style="font-size:15px">edit</span></button>
+              <button class="action-btn danger"><span class="material-icons" style="font-size:15px">delete</span></button>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="cb"></td>
+            <td>1007</td>
+            <td>Samsung 990 Pro 2TB</td>
+            <td class="right">10</td>
+            <td class="right">1,499</td>
+            <td class="right">10%</td>
+            <td class="right">900</td>
+            <td class="right col-virtual">14,990</td>
+            <td class="right col-virtual">13,491.00</td>
+            <td class="right col-virtual profit-positive">3,591.00</td>
+            <td><span class="status-badge status-processing">处理中</span></td>
+            <td class="action-btns">
+              <button class="action-btn"><span class="material-icons" style="font-size:15px">edit</span></button>
+              <button class="action-btn danger"><span class="material-icons" style="font-size:15px">delete</span></button>
+            </td>
+          </tr>
+          <tr class="row-new">
+            <td><input type="checkbox" class="cb"></td>
+            <td>1011</td>
+            <td>新商品</td>
+            <td class="right">1</td>
+            <td class="right">100</td>
+            <td class="right">0%</td>
+            <td class="right">50</td>
+            <td class="right col-virtual">100</td>
+            <td class="right col-virtual">100.00</td>
+            <td class="right col-virtual profit-positive">50.00</td>
+            <td><span class="status-badge status-pending">待处理</span></td>
+            <td class="action-btns">
+              <button class="action-btn"><span class="material-icons" style="font-size:15px">edit</span></button>
+              <button class="action-btn danger"><span class="material-icons" style="font-size:15px">delete</span></button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="paginator">共 10 条 · 虚拟列（小计/实付/利润）根据数量×单价自动计算</div>
+    <div class="note-box"><strong>虚拟列：</strong>小计=数量×单价 · 实付=数量×单价×(1-折扣) · 利润=实付-成本。修改源数据自动联动，紫色斜体显示</div>
+  </div>
+
+  <!-- ================================================================ -->
+  <!-- Tab 3: 过滤与搜索 -->
+  <!-- ================================================================ -->
+  <div class="demo-card">
+    <div class="card-header">
+      <span class="material-icons">filter_alt</span>
+      <h3>过滤与搜索</h3>
+      <span class="badge">多条件</span>
+    </div>
+
+    <div class="toolbar">
+      <input class="toolbar-search" placeholder="全局搜索所有列..." value="华东">
+      <div style="flex:1"></div>
+      <button class="btn btn-outline"><span class="material-icons" style="font-size:16px">filter_alt_off</span> 清除过滤</button>
+    </div>
+
+    <div class="filter-bar">
+      <select class="filter-input">
+        <option>全部地区</option>
+        <option selected>华东</option>
+        <option>华北</option>
+        <option>华南</option>
+      </select>
+      <input class="filter-input" placeholder="产品" value="">
+      <input class="filter-input" placeholder="销售额" value="">
+      <input class="filter-input" placeholder="成本" value="">
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>地区</th>
+            <th>产品</th>
+            <th class="right">销售额</th>
+            <th class="right">成本</th>
+            <th class="right col-virtual">利润</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>4</td>
+            <td><strong>华东</strong></td>
+            <td>手机</td>
+            <td class="right">1,500,000</td>
+            <td class="right">950,000</td>
+            <td class="right col-virtual profit-positive">550,000</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><strong>华东</strong></td>
+            <td>电脑</td>
+            <td class="right">1,100,000</td>
+            <td class="right">720,000</td>
+            <td class="right col-virtual profit-positive">380,000</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td><strong>华东</strong></td>
+            <td>配件</td>
+            <td class="right">380,000</td>
+            <td class="right">200,000</td>
+            <td class="right col-virtual profit-positive">180,000</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="paginator">显示 3/15 条（过滤后） · 全局搜索「华东」+ 部门下拉过滤</div>
+    <div class="note-box"><strong>过滤：</strong>部门下拉选择 · 产品文本搜索 · 销售额/成本数字过滤 · 全局搜索跨列 · 多条件 AND 组合</div>
+  </div>
+
+  <!-- ================================================================ -->
+  <!-- Tab 4: 聚合统计 -->
+  <!-- ================================================================ -->
+  <div class="demo-card">
+    <div class="card-header">
+      <span class="material-icons">analytics</span>
+      <h3>聚合统计</h3>
+      <span class="badge">SUM/AVG</span>
+    </div>
+
+    <div class="toolbar">
+      <div style="flex:1"></div>
+      <button class="btn btn-primary"><span class="material-icons" style="font-size:16px">calculate</span> 计算聚合</button>
+    </div>
+
+    <div class="agg-bar">
+      <div class="agg-item"><span class="agg-label">总销售额：</span><span class="agg-value">¥ 11,230,000.00</span></div>
+      <div class="agg-item"><span class="agg-label">总成本：</span><span class="agg-value">¥ 7,340,000.00</span></div>
+      <div class="agg-item"><span class="agg-label">总利润：</span><span class="agg-value">¥ 3,890,000.00</span></div>
+      <div class="agg-item"><span class="agg-label">平均销售额：</span><span class="agg-value">¥ 748,666.67</span></div>
+      <div class="agg-item"><span class="agg-label">产品数：</span><span class="agg-value">15</span></div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>地区</th>
+            <th>产品</th>
+            <th class="right">销售额</th>
+            <th class="right">成本</th>
+            <th class="right col-virtual">利润</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>4</td><td>华东</td><td>手机</td>
+            <td class="right">1,500,000</td><td class="right">950,000</td>
+            <td class="right col-virtual profit-positive">550,000</td>
+          </tr>
+          <tr>
+            <td>5</td><td>华东</td><td>电脑</td>
+            <td class="right">1,100,000</td><td class="right">720,000</td>
+            <td class="right col-virtual profit-positive">380,000</td>
+          </tr>
+          <tr>
+            <td>7</td><td>华南</td><td>手机</td>
+            <td class="right">1,350,000</td><td class="right">880,000</td>
+            <td class="right col-virtual profit-positive">470,000</td>
+          </tr>
+          <tr>
+            <td>1</td><td>华北</td><td>手机</td>
+            <td class="right">1,200,000</td><td class="right">800,000</td>
+            <td class="right col-virtual profit-positive">400,000</td>
+          </tr>
+          <tr>
+            <td>2</td><td>华北</td><td>电脑</td>
+            <td class="right">980,000</td><td class="right">650,000</td>
+            <td class="right col-virtual profit-positive">330,000</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="paginator">共 15 条 · SUM 总计 / AVG 平均 / COUNT 计数 / MIN/MAX 最值</div>
+    <div class="note-box"><strong>聚合：</strong>sum 总计 · avg 平均 · count 计数 · min 最小 · max 最大 · 支持按字段分组</div>
+  </div>
+
+  <!-- ================================================================ -->
+  <!-- Tab 5: 行操作与状态 -->
+  <!-- ================================================================ -->
+  <div class="demo-card">
+    <div class="card-header">
+      <span class="material-icons">rule</span>
+      <h3>行操作与状态</h3>
+      <span class="badge">三缓冲区</span>
+    </div>
+
+    <div class="buffer-stats">
+      <div class="stat-chip blue"><span class="material-icons" style="font-size:18px;color:#1976d2">table_chart</span><span>主缓冲</span><span class="num">14</span>行</div>
+      <div class="stat-chip orange"><span class="material-icons" style="font-size:18px;color:#ff9800">filter_alt</span><span>过滤缓冲</span><span class="num">0</span>行</div>
+      <div class="stat-chip red"><span class="material-icons" style="font-size:18px;color:#f44336">delete_forever</span><span>删除缓冲</span><span class="num">1</span>行</div>
+    </div>
+
+    <div class="toolbar">
+      <input class="toolbar-search" placeholder="搜索..." value="">
+      <div style="flex:1"></div>
+      <button class="btn btn-primary"><span class="material-icons" style="font-size:16px">person_add</span> 新增行</button>
+      <button class="btn btn-outline warn"><span class="material-icons" style="font-size:16px">delete</span> 删除末行</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:36px"><input type="checkbox" class="cb"></th>
+            <th>ID</th>
+            <th>姓名</th>
+            <th>部门</th>
+            <th>职位</th>
+            <th>邮箱</th>
+            <th class="right">月薪</th>
+            <th style="width:100px">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="row-new">
+            <td><input type="checkbox" class="cb"></td>
+            <td>16</td><td><b>新行</b></td><td>技术部</td><td>员工</td>
+            <td>new@example.com</td><td class="right">15,000</td>
+            <td class="action-btns">
+              <button class="action-btn"><span class="material-icons" style="font-size:15px">edit</span></button>
+              <button class="action-btn danger"><span class="material-icons" style="font-size:15px">delete</span></button>
+            </td>
+          </tr>
+          <tr class="row-modified">
+            <td><input type="checkbox" class="cb"></td>
+            <td>3</td><td>王五</td><td>技术部</td><td>首席架构师</td>
+            <td>wangwu@example.com</td><td class="right">38,000</td>
+            <td class="action-btns">
+              <button class="action-btn"><span class="material-icons" style="font-size:15px">edit</span></button>
+              <button class="action-btn danger"><span class="material-icons" style="font-size:15px">delete</span></button>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="cb"></td>
+            <td>1</td><td>张三</td><td>技术部</td><td>高级工程师</td>
+            <td>zhangsan@example.com</td><td class="right">25,000</td>
+            <td class="action-btns">
+              <button class="action-btn"><span class="material-icons" style="font-size:15px">edit</span></button>
+              <button class="action-btn danger"><span class="material-icons" style="font-size:15px">delete</span></button>
+            </td>
+          </tr>
+          <tr class="row-deleted">
+            <td><input type="checkbox" class="cb"></td>
+            <td>4</td><td>赵六</td><td>财务部</td><td>财务主管</td>
+            <td>zhaoliu@example.com</td><td class="right">22,000</td>
+            <td><button class="restore-btn"><span class="material-icons" style="font-size:14px">restore</span> 恢复</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note-box">
+      <strong>行状态：</strong>🟢 新增行 · 🟡 修改行（黄色高亮） · 🔴 已删除行（可恢复） · 三缓冲区架构（主/过滤/删除）
+    </div>
+  </div>
+
+  <!-- ================================================================ -->
+  <!-- Tab 6: 完整配置 -->
+  <!-- ================================================================ -->
+  <div class="demo-card">
+    <div class="card-header">
+      <span class="material-icons">settings</span>
+      <h3>完整配置示例</h3>
+      <span class="badge">全部选项</span>
+    </div>
+
+    <div class="toolbar">
+      <input class="toolbar-search" placeholder="搜索..." value="">
+      <div style="flex:1"></div>
+      <button class="btn btn-primary"><span class="material-icons" style="font-size:16px">add</span> 新增</button>
+      <button class="btn btn-outline warn"><span class="material-icons" style="font-size:16px">delete</span></button>
+      <button class="btn-icon"><span class="material-icons" style="font-size:18px">refresh</span></button>
+      <button class="btn-icon"><span class="material-icons" style="font-size:18px">download</span></button>
+      <button class="btn btn-outline" style="font-size:12px;padding:6px 10px"><span class="material-icons" style="font-size:14px">content_copy</span> 复制</button>
+      <button class="btn btn-outline" style="font-size:12px;padding:6px 10px"><span class="material-icons" style="font-size:14px">share</span> 分享</button>
+      <button class="btn btn-outline" style="font-size:12px;padding:6px 10px"><span class="material-icons" style="font-size:14px">archive</span> 归档</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:36px"><input type="checkbox" class="cb" checked></th>
+            <th>ID</th>
+            <th>名称</th>
+            <th>分类</th>
+            <th class="right">价格</th>
+            <th class="right">库存</th>
+            <th style="width:100px">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="row-selected">
+            <td><input type="checkbox" class="cb" checked></td>
+            <td>1</td><td>商品1</td>
+            <td><span class="status-badge" style="background:#e8f5e9;color:#2e7d32">电子产品</span></td>
+            <td class="right">¥ 784.00</td>
+            <td class="right">312</td>
+            <td class="action-btns">
+              <button class="action-btn"><span class="material-icons" style="font-size:15px">edit</span></button>
+              <button class="action-btn danger"><span class="material-icons" style="font-size:15px">delete</span></button>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="cb" checked></td>
+            <td>2</td><td>商品2</td>
+            <td><span class="status-badge" style="background:#fff3e0;color:#e65100">服装</span></td>
+            <td class="right">¥ 523.00</td>
+            <td class="right">187</td>
+            <td class="action-btns">
+              <button class="action-btn"><span class="material-icons" style="font-size:15px">edit</span></button>
+              <button class="action-btn danger"><span class="material-icons" style="font-size:15px">delete</span></button>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="cb"></td>
+            <td>3</td><td>商品3</td>
+            <td><span class="status-badge" style="background:#f3e5f5;color:#6a1b9a">食品</span></td>
+            <td class="right">¥ 341.00</td>
+            <td class="right">99</td>
+            <td class="action-btns">
+              <button class="action-btn"><span class="material-icons" style="font-size:15px">edit</span></button>
+              <button class="action-btn danger"><span class="material-icons" style="font-size:15px">delete</span></button>
+            </td>
+          </tr>
+          <tr>
+            <td><input type="checkbox" class="cb"></td>
+            <td>4</td><td>商品4</td>
+            <td><span class="status-badge" style="background:#e3f2fd;color:#1565c0">图书</span></td>
+            <td class="right">¥ 1,028.00</td>
+            <td class="right">55</td>
+            <td class="action-btns">
+              <button class="action-btn"><span class="material-icons" style="font-size:15px">edit</span></button>
+              <button class="action-btn danger"><span class="material-icons" style="font-size:15px">delete</span></button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="paginator">已选 2/20 项 · 每页 <select style="padding:2px 6px"><option>10</option></select> 条 · 1 2 &raquo;</div>
+
+    <div class="note-box">
+      <strong>完整配置：</strong>自定义工具栏按钮（复制/分享/归档）· 列过滤 · 多选 · 分页 · 排序 · 导出 CSV+JSON
+    </div>
+  </div>
+
+</div>
+
+<div style="text-align:center;padding:40px 20px;color:#999;font-size:13px;">
+  ngx-datawindow · 基于 PowerBuilder DataWindow 设计哲学的 Angular 表格组件<br>
+  GitHub: <a href="https://github.com/Sugitter/ngx-datawindow" style="color:#1976d2">github.com/Sugitter/ngx-datawindow</a>
+  · 实时演示: <strong>http://localhost:4200</strong>
+</div>
+
+</body>
+</html>
