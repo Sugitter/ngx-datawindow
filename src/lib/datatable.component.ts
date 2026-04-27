@@ -5,7 +5,7 @@
 
 import {
   Component, Input, Output, EventEmitter, ViewChild, ChangeDetectionStrategy,
-  inject, signal, computed, OnInit, OnDestroy, OnChanges, ChangeDetectorRef,
+  signal, computed, OnInit, OnDestroy, OnChanges, ChangeDetectorRef,
   ContentChild, TemplateRef
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -20,8 +20,6 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { SelectionModel } from '@angular/cdk/collections';
@@ -47,8 +45,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
     MatTableModule, MatPaginatorModule, MatSortModule,
     MatCheckboxModule, MatInputModule, MatFormFieldModule,
     MatSelectModule, MatButtonModule, MatIconModule,
-    MatTooltipModule, MatSnackBarModule, MatDialogModule,
-    ScrollingModule, MatMenuModule, MatProgressSpinnerModule,
+    MatTooltipModule, ScrollingModule, MatMenuModule, MatProgressSpinnerModule,
   ],
   template: `
     <div class="dt-container" [class.dt-loading]="loading()">
@@ -552,8 +549,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DataTableComponent implements OnInit, OnChanges {
-  private _service = inject(DataTableService);
-  private _snackBar = inject(MatSnackBar, { optional: true });
+  constructor(private _service: DataTableService) {}
 
   // ── 输入 ──────────────────────────────────────────────────────────────────
 
@@ -561,10 +557,10 @@ export class DataTableComponent implements OnInit, OnChanges {
   @Input() set columns(v: ColumnConfig[]) { this._columns = v; }
   @Input() set data(v: Record<string, RawValue>[]) {
     if (v) {
-      this._service.setData(v);
+      this._service!.setData(v);
       if (this._virtualScrollEnabled()) {
         // 虚拟滚动模式下，同步全部行数据
-        const rows = this._service.getDataStore().getRows();
+        const rows = this._service!.getDataStore().getRows();
         this._allRows = [...rows];
       }
     }
@@ -601,11 +597,11 @@ export class DataTableComponent implements OnInit, OnChanges {
   // ── 响应式 ────────────────────────────────────────────────────────────────
 
   readonly loading = this._loadingInput.asReadonly();
-  readonly searchQuery = () => this._service.state().globalSearch;
-  readonly pageIndex = () => this._service.state().pageIndex;
-  readonly pageSize = () => this._service.state().pageSize;
-  readonly hasSelection = this._service.hasSelection;
-  readonly selectionCount = this._service.selectionCount;
+  readonly searchQuery = () => this._service!.state().globalSearch;
+  readonly pageIndex = () => this._service!.state().pageIndex;
+  readonly pageSize = () => this._service!.state().pageSize;
+  hasSelection(): boolean { return this._service!.hasSelection(); }
+  selectionCount(): number { return this._service!.selectionCount(); }
 
   readonly selectionMode = computed(() => this._tableConfig?.selectionMode ?? 'none');
   readonly toolbarActions = computed(() => this._tableConfig?.toolbarActions);
@@ -624,7 +620,7 @@ export class DataTableComponent implements OnInit, OnChanges {
   });
 
   readonly dataSource = computed(() => {
-    const result = this._service.rows();
+    const result = this._service!.rows();
     return result.rows.map(r => ({ ...r.raw, _id: r.id, _status: r.status }));
   });
 
@@ -644,13 +640,13 @@ export class DataTableComponent implements OnInit, OnChanges {
   });
 
   private _totalRowCount = computed(() => {
-    return this._service.totalRows();
+    return this._service!.totalRows();
   });
 
   // ── 生命周期 ───────────────────────────────────────────────────────────────
 
   ngOnInit(): void {
-    this._service.initialize({
+    this._service!.initialize({
       datastore: this._datastoreConfig,
       columns: this._columns,
       initialData: [],
@@ -663,12 +659,12 @@ export class DataTableComponent implements OnInit, OnChanges {
       this._virtualRowHeight.set(vs.rowHeight ?? 48);
       this._virtualScrollEnabled.set(true);
       // 虚拟滚动模式：使用极大 pageSize 让 DataStore 加载全部行
-      this._service.setPageSize(999999);
+      this._service!.setPageSize(999999);
       this._syncAllRows();
     }
 
     // 监听数据变化，同步虚拟滚动数据
-    const ds = this._service.getDataStore();
+    const ds = this._service!.getDataStore();
     if (ds) {
       ds.on('rowAdded', () => this._syncAllRows());
       ds.on('rowUpdated', () => this._syncAllRows());
@@ -686,14 +682,14 @@ export class DataTableComponent implements OnInit, OnChanges {
       if (vs?.enabled && !this._virtualScrollEnabled()) {
         this._virtualRowHeight.set(vs.rowHeight ?? 48);
         this._virtualScrollEnabled.set(true);
-        this._service.setPageSize(999999);
+        this._service!.setPageSize(999999);
         this._syncAllRows();
       }
     }
   }
 
   private _syncAllRows(): void {
-    const ds = this._service.getDataStore();
+    const ds = this._service!.getDataStore();
     if (ds) {
       this._allRows = [...ds.getRows()];
     }
@@ -712,15 +708,15 @@ export class DataTableComponent implements OnInit, OnChanges {
   }
 
   onDeleteSelected(): void {
-    const count = this._service.deleteSelected();
-    this._snackBar?.open(`已删除 ${count} 行`, '关闭', { duration: 2000 });
+    const count = this._service!.deleteSelected();
+    // deleted
     this.toolbarAction.emit({ action: { type: 'delete' } });
   }
 
   onRefresh(): void {
-    this._service.reset();
-    this._service.setData([]);
-    this._snackBar?.open('已刷新', '', { duration: 1000 });
+    this._service!.reset();
+    this._service!.setData([]);
+    // refreshed
     this.toolbarAction.emit({ action: { type: 'refresh' } });
   }
 
@@ -732,44 +728,44 @@ export class DataTableComponent implements OnInit, OnChanges {
 
   onSearchChange(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
-    this._service.setGlobalSearch(value);
+    this._service!.setGlobalSearch(value);
   }
 
   clearSearch(): void {
-    this._service.setGlobalSearch('');
+    this._service!.setGlobalSearch('');
   }
 
   onColumnFilter(field: string, value: unknown): void {
-    this._service.setColumnFilter(field, value);
+    this._service!.setColumnFilter(field, value);
   }
 
   getColumnFilter(field: string): unknown {
-    return this._service.state().columnFilters[field];
+    return this._service!.state().columnFilters[field];
   }
 
   // ── 选择 ──────────────────────────────────────────────────────────────────
 
   toggleSelectAll(checked: boolean): void {
-    this._service.selectAll(checked);
+    this._service!.selectAll(checked);
   }
 
   toggleRowSelect(rowId: number, checked: boolean): void {
-    this._service.selectRow(rowId, checked);
-    this.selectionChanged.emit(this._service.state().selectedRows);
+    this._service!.selectRow(rowId, checked);
+    this.selectionChanged.emit(this._service!.state().selectedRows);
   }
 
   isRowSelected(rowId: number): boolean {
-    return this._service.isSelected(rowId);
+    return this._service!.isSelected(rowId);
   }
 
   isAllSelected(): boolean {
-    const all = this._service.rows().rows;
-    return all.length > 0 && all.every(r => this._service.isSelected(r.id));
+    const all = this._service!.rows().rows;
+    return all.length > 0 && all.every(r => this._service!.isSelected(r.id));
   }
 
   isIndeterminate(): boolean {
-    const sel = this._service.state().selectedRows.size;
-    return sel > 0 && sel < this._service.rows().rows.length;
+    const sel = this._service!.state().selectedRows.size;
+    return sel > 0 && sel < this._service!.rows().rows.length;
   }
 
   // ── 行操作 ────────────────────────────────────────────────────────────────
@@ -780,13 +776,13 @@ export class DataTableComponent implements OnInit, OnChanges {
 
   deleteRow(rowId: number): void {
     if (confirm('确认删除?')) {
-      this._service.deleteRow(rowId);
+      this._service!.deleteRow(rowId);
       this.rowDeleted.emit(rowId);
     }
   }
 
   restoreRow(rowId: number): void {
-    this._service.restoreRow(rowId);
+    this._service!.restoreRow(rowId);
   }
 
   rowStatus(row: DataRow | any): string {
@@ -794,7 +790,7 @@ export class DataTableComponent implements OnInit, OnChanges {
   }
 
   onRowClick(row: any, event: MouseEvent): void {
-    const dr = this._service.getDataStore().getRowById(row._id);
+    const dr = this._service!.getDataStore().getRowById(row._id);
     if (dr) {
       this.rowClicked.emit({ row: dr, event });
     }
@@ -804,7 +800,7 @@ export class DataTableComponent implements OnInit, OnChanges {
   }
 
   onRowDoubleClick(row: any, event: MouseEvent): void {
-    const dr = this._service.getDataStore().getRowById(row._id);
+    const dr = this._service!.getDataStore().getRowById(row._id);
     if (dr) {
       this.rowDoubleClicked.emit({ row: dr, event });
     }
@@ -827,7 +823,7 @@ export class DataTableComponent implements OnInit, OnChanges {
 
   saveEdit(rowId: number, field: string): void {
     if (this._editValueInternal !== null) {
-      this._service.updateRow(rowId, { [field]: this._editValueInternal as RawValue });
+      this._service!.updateRow(rowId, { [field]: this._editValueInternal as RawValue });
     }
     this.cancelEdit();
   }
@@ -840,8 +836,8 @@ export class DataTableComponent implements OnInit, OnChanges {
   // ── 分页 ──────────────────────────────────────────────────────────────────
 
   onPageChange(event: PageEvent): void {
-    this._service.setPage(event.pageIndex);
-    this._service.setPageSize(event.pageSize);
+    this._service!.setPage(event.pageIndex);
+    this._service!.setPageSize(event.pageSize);
     this.pageChanged.emit(event);
   }
 
@@ -858,10 +854,10 @@ export class DataTableComponent implements OnInit, OnChanges {
 
   exportData(format: 'csv' | 'json'): void {
     if (format === 'csv') {
-      const csv = this._service.exportToCSV({ format: 'csv' });
+      const csv = this._service!.exportToCSV({ format: 'csv' });
       this._downloadFile(csv, 'export.csv', 'text/csv');
     } else {
-      const json = this._service.exportToJSON({ format: 'json' });
+      const json = this._service!.exportToJSON({ format: 'json' });
       this._downloadFile(json, 'export.json', 'application/json');
     }
   }
@@ -885,15 +881,15 @@ export class DataTableComponent implements OnInit, OnChanges {
 
   // ── 公共 API ──────────────────────────────────────────────────────────────
 
-  getService(): DataTableService { return this._service; }
+  getService(): DataTableService { return this._service!; }
 
-  setData(data: Record<string, RawValue>[]): void { this._service.setData(data); }
-  addRow(data: Record<string, RawValue>): DataRow { return this._service.addRow(data); }
+  setData(data: Record<string, RawValue>[]): void { this._service!.setData(data); }
+  addRow(data: Record<string, RawValue>): DataRow { return this._service!.addRow(data); }
   updateRow(rowId: number, data: Partial<Record<string, RawValue>>): Promise<boolean> {
-    return this._service.updateRow(rowId, data);
+    return this._service!.updateRow(rowId, data);
   }
-  deleteRowFromService(rowId: number): boolean { return this._service.deleteRow(rowId); }
-  validate() { return this._service.validate(); }
-  generateUpdates() { return this._service.generateUpdates(); }
-  commit() { this._service.commit(); }
+  deleteRowFromService(rowId: number): boolean { return this._service!.deleteRow(rowId); }
+  validate() { return this._service!.validate(); }
+  generateUpdates() { return this._service!.generateUpdates(); }
+  commit() { this._service!.commit(); }
 }

@@ -2,7 +2,7 @@
  * ngx-datawindow 功能演示页面
  * 6 个 Tab 展示所有核心功能
  */
-import { Component, OnInit, ViewChild, signal, computed } from '@angular/core';
+import { Component, OnInit, ViewChild, signal, computed, NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -17,7 +17,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 
 import {
-  DataTableComponent, DataTableService, DataRow, RowId, RawValue,
+  DataTableModule, DataTableComponent, DataTableService, DataRow, RowId, RawValue,
   ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig,
   AggregationFormula, UpdateData, ValidationResult
 } from 'ngx-datawindow';
@@ -31,8 +31,9 @@ interface AggResult { formulaId: string; label: string; value: number; }
     MatTabsModule, MatCardModule, MatButtonModule, MatIconModule,
     MatDividerModule, MatChipsModule, MatSnackBarModule,
     MatTooltipModule, MatFormFieldModule, MatInputModule,
-    DataTableComponent,
+    DataTableModule,
   ],
+  schemas: [NO_ERRORS_SCHEMA, CUSTOM_ELEMENTS_SCHEMA],
   template: `
     <!-- 功能导航 -->
     <div class="demo-nav">
@@ -502,10 +503,10 @@ export class DemoComponent implements OnInit {
   deletedCount = signal(0);
   mainCount = signal(0);
   filteredCount = signal(0);
-
-  // 从 DataTableComponent 来的选择状态
   hasSelection = signal(false);
   selectionCount = signal(0);
+
+
 
   // ── Tab 1: 基础增删改查 ────────────────────────────────────────────────────
 
@@ -1017,7 +1018,7 @@ const datastoreConfig: DataStoreConfig = {
     };
     this.aggResults.set(
       Object.entries(results).map(([id, r]) => ({
-        formulaId: id, label: labels[id] || id, value: r.value as number,
+        formulaId: id, label: labels[id] || id, value: (r as any).value as number,
       }))
     );
   }
@@ -1057,7 +1058,7 @@ const datastoreConfig: DataStoreConfig = {
 
   // ── Tab 6 操作 ──────────────────────────────────────────────────────────
 
-  onFullConfigAction(event: { action: ToolbarAction }): void {
+  onFullConfigAction(event: any): void {
     if (event.action.type === 'custom' && event.action.id) {
       this.openSnackBar(`自定义操作：${event.action.id}`);
     }
@@ -1065,24 +1066,24 @@ const datastoreConfig: DataStoreConfig = {
 
   // ── 事件处理 ──────────────────────────────────────────────────────────────
 
-  onRowAdded(row: DataRow): void {
+  onRowAdded(row: any): void {
     console.log('[Demo] 行已添加:', row.id);
     this.updateStats();
   }
 
-  onRowUpdated(event: { row: DataRow; changes: Record<string, unknown> }): void {
+  onRowUpdated(event: any): void {
     console.log('[Demo] 行已更新:', event.row.id, event.changes);
     this.diffUpdates.set(this.basicTable.generateUpdates());
     this.updateStats();
   }
 
-  onRowDeleted(rowId: RowId): void {
+  onRowDeleted(rowId: any): void {
     console.log('[Demo] 行已删除:', rowId);
     this.updateStats();
     this.updateRowOpsStats();
   }
 
-  onToolbarAction(event: { action: ToolbarAction }): void {
+  onToolbarAction(event: any): void {
     console.log('[Demo] 工具栏操作:', event);
     if (event.action.type === 'add') this.openSnackBar('新增操作');
   }

@@ -3,7 +3,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
-import { MatIconModule, MatIcon } from '@angular/material/icon';
+import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 
 @Component({
@@ -11,7 +11,7 @@ import { MatButtonModule } from '@angular/material/button';
     imports: [
         RouterOutlet, RouterLink, RouterLinkActive,
         MatToolbarModule, MatSidenavModule, MatListModule,
-        MatIconModule, MatIcon, MatButtonModule,
+        MatIconModule, MatButtonModule,
     ],
     template: `
         <mat-sidenav-container class="app-container">

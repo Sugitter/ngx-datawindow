@@ -1,5 +1,5 @@
 /**
- * ngx-datawindow 模块
+ * ngx-datawindow module
  */
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -22,20 +22,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DataTableComponent } from './datatable.component';
 
 const MATERIAL_MODULES = [
-  MatTableModule,
-  MatPaginatorModule,
-  MatSortModule,
-  MatCheckboxModule,
-  MatInputModule,
-  MatFormFieldModule,
-  MatSelectModule,
-  MatButtonModule,
-  MatIconModule,
-  MatTooltipModule,
-  MatSnackBarModule,
-  MatMenuModule,
-  MatChipsModule,
-  MatProgressSpinnerModule,
+  MatTableModule, MatPaginatorModule, MatSortModule, MatCheckboxModule,
+  MatInputModule, MatFormFieldModule, MatSelectModule, MatButtonModule,
+  MatIconModule, MatTooltipModule, MatSnackBarModule, MatMenuModule,
+  MatChipsModule, MatProgressSpinnerModule,
 ];
 
 @NgModule({
@@ -44,8 +34,6 @@ const MATERIAL_MODULES = [
     ReactiveFormsModule,
     FormsModule,
     ...MATERIAL_MODULES,
-    DataTableComponent,
   ],
-  exports: [DataTableComponent],
 })
 export class DataTableModule {}
