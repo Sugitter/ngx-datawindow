@@ -1,6 +1,6 @@
 /**
- * 完整功能演示页面
- * 展示 ngx-datawindow 所有功能
+ * ngx-datawindow 功能演示页面
+ * 6 个 Tab 展示所有核心功能
  */
 import { Component, OnInit, ViewChild, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -11,30 +11,32 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatBadgeModule } from '@angular/material/badge';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 
-import { DataTableComponent, DataTableService, DataRow, RowId, RawValue, ToolbarEvent } from 'ngx-datawindow';
-import { ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig, AggregationFormula, UpdateData, ValidationResult } from 'ngx-datawindow';
+import {
+  DataTableComponent, DataTableService, DataRow, RowId, RawValue,
+  ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig,
+  AggregationFormula, UpdateData, ValidationResult
+} from 'ngx-datawindow';
+
+interface AggResult { formulaId: string; label: string; value: number; }
 
 @Component({
-    selector: 'app-demo',
-    imports: [
-        CommonModule, FormsModule,
-        MatTabsModule, MatCardModule, MatButtonModule, MatIconModule,
-        MatDividerModule, MatChipsModule, MatBadgeModule, MatSnackBarModule,
-        MatDialogModule, MatTooltipModule, MatFormFieldModule, MatInputModule,
-        MatSelectModule, DataTableComponent,
-    ],
-    template: `
-    <!-- 功能演示导航 -->
+  selector: 'app-demo',
+  imports: [
+    CommonModule, FormsModule,
+    MatTabsModule, MatCardModule, MatButtonModule, MatIconModule,
+    MatDividerModule, MatChipsModule, MatSnackBarModule,
+    MatTooltipModule, MatFormFieldModule, MatInputModule,
+    DataTableComponent,
+  ],
+  template: `
+    <!-- 功能导航 -->
     <div class="demo-nav">
-      @for (tab of tabs; track tab.id; let i = $index) {
+      @for (tab of tabs; track tab.id) {
         <button class="tab-btn" [class.active]="activeTab() === tab.id"
           (click)="setActiveTab(tab.id)">
           <mat-icon>{{ tab.icon }}</mat-icon>
@@ -43,64 +45,54 @@ import { ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig, AggregationF
       }
     </div>
 
+    <!-- ================================================================ -->
     <!-- Tab 1: 基础增删改查 -->
+    <!-- ================================================================ -->
     @if (activeTab() === 'basic') {
       <div class="demo-section">
         <div class="section-header">
           <h2>基础增删改查</h2>
-          <p class="section-desc">演示最常用的表格功能：增、删、改、查、排序、分页、选择、导出</p>
+          <p class="section-desc">增、删、改、查、排序、分页、多选、导出、差异更新</p>
         </div>
 
-        <!-- 功能按钮 -->
         <div class="action-bar">
           <div class="action-group">
             <button mat-flat-button color="primary" (click)="addEmployee()">
-              <mat-icon>person_add</mat-icon>
-              新增员工
+              <mat-icon>person_add</mat-icon> 新增员工
             </button>
             <button mat-stroked-button color="warn" (click)="deleteSelected()"
               [disabled]="!hasSelection()">
-              <mat-icon>delete_sweep</mat-icon>
-              删除选中 ({{ selectionCount() }})
+              <mat-icon>delete_sweep</mat-icon> 删除选中
+              @if (selectionCount() > 0) { <span class="dt-badge">{{ selectionCount() }}</span> }
             </button>
             <button mat-stroked-button (click)="refreshData()">
-              <mat-icon>refresh</mat-icon>
-              刷新数据
+              <mat-icon>refresh</mat-icon> 刷新数据
             </button>
           </div>
-
           <div class="action-group">
-            <button mat-stroked-button (click)="exportCSV()" matTooltip="导出为 CSV">
-              <mat-icon>table_chart</mat-icon>
-              导出 CSV
+            <button mat-stroked-button (click)="exportCSV()" matTooltip="导出 CSV">
+              <mat-icon>table_chart</mat-icon> CSV
             </button>
-            <button mat-stroked-button (click)="exportJSON()" matTooltip="导出为 JSON">
-              <mat-icon>code</mat-icon>
-              导出 JSON
+            <button mat-stroked-button (click)="exportJSON()" matTooltip="导出 JSON">
+              <mat-icon>code</mat-icon> JSON
             </button>
-            <button mat-stroked-button (click)="validateTable()" matTooltip="校验数据">
-              <mat-icon>verified</mat-icon>
-              校验
+            <button mat-stroked-button (click)="validateTable()">
+              <mat-icon>verified</mat-icon> 校验
             </button>
-            <button mat-stroked-button (click)="showDiff()" matTooltip="查看差异更新">
-              <mat-icon>diff</mat-icon>
-              差异更新
+            <button mat-stroked-button (click)="showDiff()">
+              <mat-icon>diff</mat-icon> 差异更新
             </button>
           </div>
         </div>
 
-        <!-- 校验提示 -->
         @if (validationResult() && !validationResult()!.valid) {
           <div class="validation-alert">
             <mat-icon>warning</mat-icon>
             <div>
-              <strong>校验失败 ({{ validationResult()!.errors.length }} 个错误)</strong>
+              <strong>校验失败 ({{ validationResult()!.errors.length }} 个)</strong>
               <ul>
                 @for (err of validationResult()!.errors.slice(0, 5); track $index) {
                   <li>{{ err.message }}</li>
-                }
-                @if (validationResult()!.errors.length > 5) {
-                  <li>... 还有 {{ validationResult()!.errors.length - 5 }} 个错误</li>
                 }
               </ul>
             </div>
@@ -111,24 +103,17 @@ import { ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig, AggregationF
           <div class="diff-panel">
             <div class="diff-header">
               <strong>差异更新 ({{ diffUpdates().length }} 条)</strong>
-              <button mat-icon-button (click)="clearDiff()">
-                <mat-icon>close</mat-icon>
-              </button>
+              <button mat-icon-button (click)="clearDiff()"><mat-icon>close</mat-icon></button>
             </div>
             <div class="diff-content">
               @for (u of diffUpdates(); track $index) {
-                <span class="diff-badge" [class]="'diff-' + u.updateType">
-                  {{ u.updateType }}
-                </span>
+                <span class="diff-badge" [class]="'diff-' + u.updateType">{{ u.updateType }}</span>
               }
-              <button mat-button color="primary" (click)="commitChanges()">
-                提交变更
-              </button>
+              <button mat-button color="primary" (click)="commitChanges()">提交变更</button>
             </div>
           </div>
         }
 
-        <!-- 表格 -->
         <ngx-datawindow
           #basicTable
           [datastoreConfig]="employeeConfig"
@@ -138,42 +123,40 @@ import { ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig, AggregationF
           (rowAdded)="onRowAdded($event)"
           (rowUpdated)="onRowUpdated($event)"
           (rowDeleted)="onRowDeleted($event)"
-          (toolbarAction)="onToolbarAction($event)"
-          (rowClicked)="onRowClicked($event)"
-          (selectionChanged)="onSelectionChanged($event)">
+          (toolbarAction)="onToolbarAction($event)">
         </ngx-datawindow>
       </div>
     }
 
+    <!-- ================================================================ -->
     <!-- Tab 2: 虚拟计算列 -->
+    <!-- ================================================================ -->
     @if (activeTab() === 'virtual') {
       <div class="demo-section">
         <div class="section-header">
           <h2>虚拟计算列</h2>
-          <p class="section-desc">演示虚拟计算列自动联动计算，支持四则运算、条件表达式、分组聚合</p>
+          <p class="section-desc">JS 函数公式，修改源数据时自动联动计算，无需存储中间结果</p>
         </div>
 
         <div class="action-bar">
           <div class="action-group">
             <button mat-flat-button color="primary" (click)="addOrder()">
-              <mat-icon>add_shopping_cart</mat-icon>
-              新增订单
+              <mat-icon>add_shopping_cart</mat-icon> 新增订单
             </button>
-            <button mat-stroked-button (click)="loadOrderData()">
-              <mat-icon>refresh</mat-icon>
-              重置数据
+            <button mat-stroked-button (click)="resetOrderData()">
+              <mat-icon>refresh</mat-icon> 重置数据
             </button>
           </div>
-
-          <!-- 聚合结果展示 -->
-          <div class="agg-results">
-            @for (agg of aggResults(); track agg.formulaId) {
-              <div class="agg-chip" [matTooltip]="agg.formulaId">
-                <span class="agg-label">{{ agg.label }}</span>
-                <span class="agg-value">{{ agg.value | number:'1.2-2' }}</span>
-              </div>
-            }
-          </div>
+          @if (aggResults().length > 0) {
+            <div class="agg-results">
+              @for (agg of aggResults(); track agg.formulaId) {
+                <div class="agg-chip">
+                  <span class="agg-label">{{ agg.label }}</span>
+                  <span class="agg-value">{{ agg.value | number:'1.2-2' }}</span>
+                </div>
+              }
+            </div>
+          }
         </div>
 
         <ngx-datawindow
@@ -181,49 +164,40 @@ import { ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig, AggregationF
           [datastoreConfig]="orderConfig"
           [columns]="orderColumns"
           [data]="orderData"
-          [tableConfig]="orderTableConfig">
+          [tableConfig]="orderTableConfig"
+          (toolbarAction)="onToolbarAction($event)">
         </ngx-datawindow>
 
-        <!-- 虚拟列说明 -->
         <div class="feature-note">
           <mat-icon>info</mat-icon>
           <div>
             <strong>虚拟列说明：</strong>
             <ul>
-              <li><code>小计 = 数量 × 单价</code> - 基础计算</li>
-              <li><code>实付 = 数量 × 单价 × (1 - 折扣)</code> - 带折扣计算</li>
-              <li><code>利润 = 实付 - 成本</code> - 跨列计算</li>
-              <li>修改数量/单价/折扣时，虚拟列自动重新计算</li>
-              <li>虚拟列不存储数据，只在读取时计算</li>
+              <li><code>小计 = 数量 x 单价</code> — 基础计算</li>
+              <li><code>实付 = 数量 x 单价 x (1 - 折扣)</code> — 带折扣计算</li>
+              <li><code>利润 = 实付 - 成本</code> — 跨列联动</li>
+              <li>修改数量/单价/折扣，虚拟列自动重算</li>
+              <li>虚拟列不持久化，只在读取时计算</li>
             </ul>
           </div>
         </div>
       </div>
     }
 
+    <!-- ================================================================ -->
     <!-- Tab 3: 过滤与搜索 -->
+    <!-- ================================================================ -->
     @if (activeTab() === 'filter') {
       <div class="demo-section">
         <div class="section-header">
           <h2>过滤与搜索</h2>
-          <p class="section-desc">支持列过滤（文本/数字/下拉选择/日期）和全局搜索，可组合使用</p>
+          <p class="section-desc">列过滤（部门选择/产品文本/销售额数字）+ 全局搜索，可组合使用</p>
         </div>
 
         <div class="action-bar">
-          <div class="action-group">
-            <button mat-stroked-button (click)="clearAllFilters()">
-              <mat-icon>filter_alt_off</mat-icon>
-              清除所有过滤
-            </button>
-          </div>
-          <div class="filter-summary">
-            @if (filterCount() > 0) {
-              <span class="filter-badge">
-                <mat-icon>filter_alt</mat-icon>
-                {{ filterCount() }} 个过滤条件
-              </span>
-            }
-          </div>
+          <button mat-stroked-button (click)="clearFilters()">
+            <mat-icon>filter_alt_off</mat-icon> 清除所有过滤
+          </button>
         </div>
 
         <ngx-datawindow
@@ -234,45 +208,43 @@ import { ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig, AggregationF
           [tableConfig]="salesTableConfig">
         </ngx-datawindow>
 
-        <!-- 过滤说明 -->
         <div class="feature-note">
           <mat-icon>info</mat-icon>
           <div>
             <strong>过滤操作说明：</strong>
             <ul>
-              <li><strong>部门列</strong>：下拉选择过滤，可多选部门</li>
-              <li><strong>产品列</strong>：文本模糊过滤，输入即搜索</li>
-              <li><strong>销售额/成本列</strong>：数字精确过滤</li>
-              <li><strong>全局搜索</strong>：同时搜索所有文本列</li>
-              <li>多个过滤条件之间是 AND 关系</li>
+              <li><strong>部门</strong>：下拉多选过滤</li>
+              <li><strong>产品</strong>：文本模糊过滤</li>
+              <li><strong>销售额/成本</strong>：数字精确过滤</li>
+              <li><strong>全局搜索</strong>：跨列全文搜索</li>
+              <li>多个过滤条件为 AND 关系</li>
             </ul>
           </div>
         </div>
       </div>
     }
 
+    <!-- ================================================================ -->
     <!-- Tab 4: 聚合统计 -->
+    <!-- ================================================================ -->
     @if (activeTab() === 'aggregate') {
       <div class="demo-section">
         <div class="section-header">
           <h2>聚合统计</h2>
-          <p class="section-desc">支持 sum/avg/count/min/max 等聚合计算，可按字段分组统计</p>
+          <p class="section-desc">注册聚合公式，计算 sum / avg / count / min / max，可按字段分组</p>
         </div>
 
         <div class="action-bar">
           <div class="action-group">
             <button mat-flat-button color="primary" (click)="computeAggregations()">
-              <mat-icon>calculate</mat-icon>
-              计算聚合
+              <mat-icon>calculate</mat-icon> 计算聚合
             </button>
             <button mat-stroked-button (click)="clearAggregations()">
-              <mat-icon>clear</mat-icon>
-              清除结果
+              <mat-icon>clear</mat-icon> 清除结果
             </button>
           </div>
         </div>
 
-        <!-- 聚合统计卡片 -->
         @if (aggResults().length > 0) {
           <div class="agg-cards">
             @for (agg of aggResults(); track agg.formulaId) {
@@ -283,9 +255,7 @@ import { ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig, AggregationF
                   <mat-card-subtitle>{{ agg.formulaId }}</mat-card-subtitle>
                 </mat-card-header>
                 <mat-card-content>
-                  <div class="agg-big-value">
-                    {{ agg.value | number:'1.2-2' }}
-                  </div>
+                  <div class="agg-big-value">{{ agg.value | number:'1.2-2' }}</div>
                 </mat-card-content>
               </mat-card>
             }
@@ -302,29 +272,27 @@ import { ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig, AggregationF
       </div>
     }
 
-    <!-- Tab 5: 行操作 -->
+    <!-- ================================================================ -->
+    <!-- Tab 5: 行操作与状态 -->
+    <!-- ================================================================ -->
     @if (activeTab() === 'rowops') {
       <div class="demo-section">
         <div class="section-header">
           <h2>行操作与状态</h2>
-          <p class="section-desc">展示行状态标识（新增/修改/删除）和行操作按钮，支持恢复已删除行</p>
+          <p class="section-desc">行状态标识（新增绿/修改黄/删除红）、删除缓冲区统计、恢复已删除行</p>
         </div>
 
         <div class="action-bar">
           <div class="action-group">
-            <button mat-stroked-button (click)="showDeletedRows()">
-              <mat-icon>delete</mat-icon>
-              查看已删除 ({{ deletedCount() }})
+            <button mat-stroked-button (click)="addRowToDemo()">
+              <mat-icon>person_add</mat-icon> 新增行
             </button>
-            <button mat-stroked-button color="primary" (click)="restoreLast()"
-              [disabled]="deletedCount() === 0">
-              <mat-icon>restore</mat-icon>
-              恢复最后一条
+            <button mat-stroked-button color="warn" (click)="deleteLastRow()">
+              <mat-icon>delete</mat-icon> 删除末行
             </button>
           </div>
         </div>
 
-        <!-- 缓冲区统计 -->
         <div class="buffer-stats">
           <div class="stat-item stat-main">
             <mat-icon>table_chart</mat-icon>
@@ -354,32 +322,34 @@ import { ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig, AggregationF
           [datastoreConfig]="employeeConfig"
           [columns]="employeeColumns"
           [data]="employeeData"
-          [tableConfig]="rowOpsTableConfig">
+          [tableConfig]="rowOpsTableConfig"
+          (rowDeleted)="onRowDeleted($event)">
         </ngx-datawindow>
 
-        <!-- 功能说明 -->
         <div class="feature-note">
           <mat-icon>info</mat-icon>
           <div>
             <strong>行状态说明：</strong>
             <ul>
-              <li><span style="background:#e8f5e9;padding:2px 8px;border-radius:4px">🟢 绿色</span> - 新增行（状态为 new）</li>
-              <li><span style="background:#fff8e1;padding:2px 8px;border-radius:4px">🟡 黄色</span> - 修改行（状态为 modified）</li>
-              <li><span style="background:#ffebee;padding:2px 8px;border-radius:4px">🔴 红色</span> - 已删除行（状态为 deleted）</li>
-              <li>操作列会显示「恢复」按钮用于恢复已删除行</li>
-              <li>差异更新可区分新增、修改、删除三类变更</li>
+              <li><span style="background:#e8f5e9;padding:2px 8px;border-radius:4px">绿色</span> — 新增行（状态为 new）</li>
+              <li><span style="background:#fff8e1;padding:2px 8px;border-radius:4px">黄色</span> — 修改行（状态为 modified）</li>
+              <li><span style="background:#ffebee;padding:2px 8px;border-radius:4px">红色</span> — 已删除行（状态为 deleted）</li>
+              <li>每行有编辑和删除按钮；已删除行显示「恢复」按钮</li>
+              <li>差异更新可区分新增/修改/删除三类变更</li>
             </ul>
           </div>
         </div>
       </div>
     }
 
-    <!-- Tab 6: 完整配置示例 -->
+    <!-- ================================================================ -->
+    <!-- Tab 6: 完整配置 -->
+    <!-- ================================================================ -->
     @if (activeTab() === 'fullconfig') {
       <div class="demo-section">
         <div class="section-header">
           <h2>完整配置示例</h2>
-          <p class="section-desc">展示所有配置选项的组合使用，包括自定义工具栏按钮、响应式列等</p>
+          <p class="section-desc">工具栏自定义按钮、列配置、排序、分页、多选、聚合的完整组合</p>
         </div>
 
         <ngx-datawindow
@@ -391,11 +361,10 @@ import { ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig, AggregationF
           (toolbarAction)="onFullConfigAction($event)">
         </ngx-datawindow>
 
-        <!-- 配置代码展示 -->
         <mat-card class="config-code-card">
           <mat-card-header>
             <mat-icon mat-card-avatar>code</mat-icon>
-            <mat-card-title>配置代码</mat-card-title>
+            <mat-card-title>关键配置代码</mat-card-title>
           </mat-card-header>
           <mat-card-content>
             <pre class="code-block">{{ configCode }}</pre>
@@ -404,276 +373,101 @@ import { ToolbarAction, ColumnConfig, TableConfig, DataStoreConfig, AggregationF
       </div>
     }
   `,
-    styles: [`
+  styles: [`
     .demo-nav {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 24px;
-      flex-wrap: wrap;
+      display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap;
     }
-
     .tab-btn {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 10px 20px;
-      border: 1px solid #e0e0e0;
-      border-radius: 8px;
-      background: #fff;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 500;
-      color: #666;
-      transition: all 0.2s;
+      display: flex; align-items: center; gap: 6px;
+      padding: 10px 20px; border: 1px solid #e0e0e0; border-radius: 8px;
+      background: #fff; cursor: pointer; font-size: 14px; font-weight: 500;
+      color: #666; transition: all 0.2s;
     }
+    .tab-btn:hover { border-color: #1976d2; color: #1976d2; background: #e3f2fd; }
+    .tab-btn.active { background: #1976d2; color: #fff; border-color: #1976d2; }
 
-    .tab-btn:hover {
-      border-color: #1976d2;
-      color: #1976d2;
-      background: #e3f2fd;
-    }
+    .demo-section { display: flex; flex-direction: column; gap: 16px; }
+    .section-header { margin-bottom: 8px; }
+    .section-header h2 { font-size: 22px; font-weight: 600; color: #333; margin: 0 0 4px; }
+    .section-desc { color: #666; font-size: 14px; margin: 0; }
 
-    .tab-btn.active {
-      background: #1976d2;
-      color: #fff;
-      border-color: #1976d2;
-    }
-
-    .demo-section {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .section-header {
-      margin-bottom: 8px;
-    }
-
-    .section-header h2 {
-      font-size: 22px;
-      font-weight: 600;
-      color: #333;
-      margin-bottom: 4px;
-    }
-
-    .section-desc {
-      color: #666;
-      font-size: 14px;
-    }
-
-    /* 操作栏 */
     .action-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-      padding: 12px 16px;
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 12px; padding: 12px 16px;
+      background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .action-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .dt-badge {
+      margin-left: 4px; background: #f44336; color: #fff; border-radius: 10px;
+      padding: 2px 6px; font-size: 12px;
     }
 
-    .action-group {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    /* 聚合结果 */
-    .agg-results {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .agg-chip {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 8px 16px;
-      background: #e3f2fd;
-      border-radius: 8px;
-      min-width: 100px;
-    }
-
-    .agg-label {
-      font-size: 12px;
-      color: #1976d2;
-    }
-
-    .agg-value {
-      font-size: 18px;
-      font-weight: 600;
-      color: #0d47a1;
-    }
-
-    /* 聚合卡片 */
-    .agg-cards {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 16px;
-      margin-bottom: 16px;
-    }
-
-    .agg-card {
-      background: linear-gradient(135deg, #1976d2, #2196f3);
-      color: #fff;
-    }
-
-    .agg-card mat-card-header { color: #fff; }
-    .agg-card mat-card-subtitle { color: rgba(255,255,255,0.7) !important; }
-
-    .agg-big-value {
-      font-size: 28px;
-      font-weight: 700;
-      text-align: center;
-      padding: 16px 0;
-      color: #fff;
-    }
-
-    /* 校验提示 */
     .validation-alert {
-      display: flex;
-      gap: 12px;
-      padding: 12px 16px;
-      background: #fff3e0;
-      border-left: 4px solid #ff9800;
-      border-radius: 4px;
-      color: #e65100;
+      display: flex; gap: 12px; padding: 12px 16px;
+      background: #fff3e0; border-left: 4px solid #ff9800;
+      border-radius: 4px; color: #e65100;
     }
+    .validation-alert ul { margin: 4px 0 0 16px; font-size: 13px; }
 
-    .validation-alert ul {
-      margin: 4px 0 0 16px;
-      font-size: 13px;
-    }
-
-    /* 差异更新面板 */
     .diff-panel {
-      padding: 12px 16px;
-      background: #e8f5e9;
-      border-left: 4px solid #4caf50;
-      border-radius: 4px;
+      padding: 12px 16px; background: #e8f5e9; border-left: 4px solid #4caf50; border-radius: 4px;
     }
-
     .diff-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
     }
-
-    .diff-content {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .diff-badge {
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      font-weight: 500;
-    }
-
+    .diff-content { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .diff-badge { padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; }
     .diff-new { background: #4caf50; color: #fff; }
     .diff-modified { background: #ff9800; color: #fff; }
     .diff-deleted { background: #f44336; color: #fff; }
 
-    /* 缓冲区统计 */
-    .buffer-stats {
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
+    .agg-results { display: flex; gap: 12px; flex-wrap: wrap; }
+    .agg-chip {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 8px 16px; background: #e3f2fd; border-radius: 8px; min-width: 100px;
     }
+    .agg-label { font-size: 12px; color: #1976d2; }
+    .agg-value { font-size: 18px; font-weight: 600; color: #0d47a1; }
 
+    .agg-cards {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px; margin-bottom: 16px;
+    }
+    .agg-card {
+      background: linear-gradient(135deg, #1976d2, #2196f3); color: #fff;
+    }
+    .agg-card mat-card-header { color: #fff; }
+    .agg-card mat-card-subtitle { color: rgba(255,255,255,0.7) !important; }
+    .agg-big-value { font-size: 28px; font-weight: 700; text-align: center; padding: 16px 0; color: #fff; }
+
+    .buffer-stats { display: flex; gap: 16px; flex-wrap: wrap; }
     .stat-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px 20px;
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      display: flex; align-items: center; gap: 10px; padding: 12px 20px;
+      background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     }
-
     .stat-item mat-icon { font-size: 28px; width: 28px; height: 28px; }
     .stat-main mat-icon { color: #1976d2; }
     .stat-filtered mat-icon { color: #ff9800; }
     .stat-deleted mat-icon { color: #f44336; }
+    .stat-label { display: block; font-size: 12px; color: #999; }
+    .stat-value { display: block; font-size: 18px; font-weight: 600; color: #333; }
 
-    .stat-label {
-      display: block;
-      font-size: 12px;
-      color: #999;
-    }
-
-    .stat-value {
-      display: block;
-      font-size: 18px;
-      font-weight: 600;
-      color: #333;
-    }
-
-    /* 过滤统计 */
-    .filter-summary { display: flex; align-items: center; }
-    .filter-badge {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 12px;
-      background: #e3f2fd;
-      color: #1976d2;
-      border-radius: 16px;
-      font-size: 13px;
-    }
-
-    /* 功能说明 */
     .feature-note {
-      display: flex;
-      gap: 12px;
-      padding: 16px;
-      background: #e3f2fd;
-      border-radius: 8px;
-      font-size: 14px;
-      color: #0d47a1;
+      display: flex; gap: 12px; padding: 16px; background: #e3f2fd;
+      border-radius: 8px; font-size: 14px; color: #0d47a1;
     }
-
-    .feature-note mat-icon {
-      flex-shrink: 0;
-      margin-top: 2px;
-    }
-
-    .feature-note ul {
-      margin: 8px 0 0 20px;
-    }
-
-    .feature-note li {
-      margin: 4px 0;
-    }
-
+    .feature-note mat-icon { flex-shrink: 0; margin-top: 2px; }
+    .feature-note ul { margin: 8px 0 0 20px; }
+    .feature-note li { margin: 4px 0; }
     .feature-note code {
-      background: rgba(255,255,255,0.5);
-      padding: 1px 6px;
-      border-radius: 4px;
-      font-size: 13px;
+      background: rgba(255,255,255,0.5); padding: 1px 6px; border-radius: 4px; font-size: 13px;
     }
 
-    /* 配置代码 */
-    .config-code-card {
-      margin-top: 16px;
-    }
-
+    .config-code-card { margin-top: 16px; }
     .code-block {
-      background: #263238;
-      color: #aed581;
-      padding: 16px;
-      border-radius: 8px;
-      overflow-x: auto;
-      font-size: 13px;
-      line-height: 1.5;
-      max-height: 400px;
+      background: #263238; color: #aed581; padding: 16px; border-radius: 8px;
+      overflow-x: auto; font-size: 13px; line-height: 1.5; max-height: 400px;
     }
   `]
 })
@@ -700,15 +494,16 @@ export class DemoComponent implements OnInit {
 
   setActiveTab(id: string) { this.activeTab.set(id); }
 
-  // ── 状态 ──────────────────────────────────────────────────────────────────
+  // ── 共享状态信号 ───────────────────────────────────────────────────────────
 
   validationResult = signal<ValidationResult | null>(null);
   diffUpdates = signal<UpdateData[]>([]);
-  aggResults = signal<{ formulaId: string; label: string; value: number }[]>([]);
+  aggResults = signal<AggResult[]>([]);
   deletedCount = signal(0);
   mainCount = signal(0);
   filteredCount = signal(0);
-  filterCount = signal(0);
+
+  // 从 DataTableComponent 来的选择状态
   hasSelection = signal(false);
   selectionCount = signal(0);
 
@@ -718,23 +513,21 @@ export class DemoComponent implements OnInit {
     name: 'employees',
     fields: [
       { name: 'id', type: 'number', required: true },
-      { name: 'name', type: 'string', required: true, displayName: '姓名' },
-      { name: 'department', type: 'string', displayName: '部门' },
-      { name: 'position', type: 'string', displayName: '职位' },
-      { name: 'email', type: 'string', displayName: '邮箱',
-        validate: (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v as string) || '邮箱格式不正确' },
-      { name: 'salary', type: 'number', displayName: '月薪',
-        validate: (v) => (v as number) >= 0 || '薪资不能为负数' },
-      { name: 'hireDate', type: 'string', displayName: '入职日期' },
-      { name: 'active', type: 'boolean', displayName: '在职', defaultValue: true },
+      { name: 'name', type: 'string', required: true },
+      { name: 'department', type: 'string' },
+      { name: 'position', type: 'string' },
+      { name: 'email', type: 'string' },
+      { name: 'salary', type: 'number' },
+      { name: 'hireDate', type: 'string' },
+      { name: 'active', type: 'boolean', defaultValue: true },
     ],
   };
 
   employeeColumns: ColumnConfig[] = [
     { field: 'id', header: 'ID', width: '60px', filterable: false },
-    { field: 'name', header: '姓名', width: '100px', editable: true,
-      filterType: 'text', filterable: true },
-    { field: 'department', header: '部门', width: '110px',
+    { field: 'name', header: '姓名', width: '100px', editable: true, filterType: 'text', filterable: true },
+    {
+      field: 'department', header: '部门', width: '110px',
       filterType: 'select', filterable: true,
       filterOptions: [
         { value: '技术部', label: '技术部' },
@@ -746,9 +539,10 @@ export class DemoComponent implements OnInit {
     },
     { field: 'position', header: '职位', width: '120px', editable: true },
     { field: 'email', header: '邮箱', width: '180px', editable: true },
-    { field: 'salary', header: '月薪', width: '100px', align: 'right',
-      editable: true, editType: 'number', filterType: 'number',
-      aggregate: { type: 'sum', precision: 0 } },
+    {
+      field: 'salary', header: '月薪', width: '100px', align: 'right',
+      editable: true, editType: 'number', filterType: 'number'
+    },
     { field: 'hireDate', header: '入职日期', width: '120px', editable: true, editType: 'date' },
     { field: 'active', header: '在职', width: '70px', editable: true, editType: 'checkbox', filterType: 'boolean' },
   ];
@@ -766,10 +560,6 @@ export class DemoComponent implements OnInit {
       delete: { icon: 'delete_sweep', label: '删除' },
       refresh: true,
       export: { icon: 'download', label: '导出', formats: ['csv', 'json'] },
-      custom: [
-        { id: 'import', icon: 'upload', label: '导入', action: 'import' },
-        { id: 'print', icon: 'print', label: '打印', action: 'print' },
-      ],
     },
     pagination: {
       pageSizeOptions: [10, 25, 50, 100],
@@ -779,9 +569,6 @@ export class DemoComponent implements OnInit {
     },
     emptyMessage: '暂无员工数据，点击「新增」添加第一条记录',
     loadingMessage: '正在加载员工数据...',
-    rowClick: (row: any, event: Event) => {
-      console.log('行点击:', row['id']);
-    },
   };
 
   employeeData: Record<string, RawValue>[] = [];
@@ -792,31 +579,37 @@ export class DemoComponent implements OnInit {
     name: 'orders',
     fields: [
       { name: 'id', type: 'number', required: true },
-      { name: 'product', type: 'string', displayName: '产品' },
-      { name: 'spec', type: 'string', displayName: '规格' },
-      { name: 'quantity', type: 'number', displayName: '数量' },
-      { name: 'unitPrice', type: 'number', displayName: '单价' },
-      { name: 'discount', type: 'number', displayName: '折扣率' },
-      { name: 'cost', type: 'number', displayName: '成本' },
+      { name: 'product', type: 'string' },
+      { name: 'spec', type: 'string' },
+      { name: 'quantity', type: 'number' },
+      { name: 'unitPrice', type: 'number' },
+      { name: 'discount', type: 'number' },
+      { name: 'cost', type: 'number' },
       // 虚拟计算列
-      { name: 'subtotal', type: 'virtual', virtual: true, displayName: '小计',
-        formula: (row) => (row.raw['quantity'] as number) * (row.raw['unitPrice'] as number) },
-      { name: 'amount', type: 'virtual', virtual: true, displayName: '实付金额',
+      {
+        name: 'subtotal', type: 'virtual', virtual: true,
+        formula: (row) => (row.raw['quantity'] as number) * (row.raw['unitPrice'] as number)
+      },
+      {
+        name: 'amount', type: 'virtual', virtual: true,
         formula: (row) => {
           const qty = (row.raw['quantity'] as number) || 0;
           const price = (row.raw['unitPrice'] as number) || 0;
           const disc = (row.raw['discount'] as number) || 0;
           return qty * price * (1 - disc);
-        }},
-      { name: 'profit', type: 'virtual', virtual: true, displayName: '利润',
+        }
+      },
+      {
+        name: 'profit', type: 'virtual', virtual: true,
         formula: (row) => {
           const qty = (row.raw['quantity'] as number) || 0;
           const price = (row.raw['unitPrice'] as number) || 0;
           const disc = (row.raw['discount'] as number) || 0;
           const cost = (row.raw['cost'] as number) || 0;
           return qty * price * (1 - disc) - cost;
-        }},
-      { name: 'status', type: 'string', displayName: '状态' },
+        }
+      },
+      { name: 'status', type: 'string' },
     ],
   };
 
@@ -824,23 +617,21 @@ export class DemoComponent implements OnInit {
     { field: 'id', header: '订单号', width: '90px', filterable: false },
     { field: 'product', header: '产品', width: '150px', editable: true },
     { field: 'spec', header: '规格', width: '120px', editable: true },
-    { field: 'quantity', header: '数量', width: '80px', editable: true, editType: 'number', align: 'right',
-      aggregate: { type: 'sum', precision: 0 } },
-    { field: 'unitPrice', header: '单价', width: '90px', editable: true, editType: 'number', align: 'right',
-      aggregate: { type: 'avg', precision: 2 } },
-    { field: 'discount', header: '折扣', width: '70px', editable: true, editType: 'number',
-      format: (v) => v != null ? `${((v as number) * 100).toFixed(0)}%` : '0%',
-      aggregate: { type: 'avg', precision: 2 } },
-    { field: 'cost', header: '成本', width: '90px', editable: true, editType: 'number', align: 'right',
-      aggregate: { type: 'sum', precision: 2 } },
-    { field: 'subtotal', header: '小计', virtual: true, width: '100px', align: 'right',
-      aggregate: { type: 'sum', precision: 2 } },
-    { field: 'amount', header: '实付金额', virtual: true, width: '110px', align: 'right',
-      aggregate: { type: 'sum', precision: 2 } },
-    { field: 'profit', header: '利润', virtual: true, width: '100px', align: 'right',
-      aggregate: { type: 'sum', precision: 2 },
-      format: (v) => v != null ? `¥${(v as number).toFixed(2)}` : '' },
-    { field: 'status', header: '状态', width: '90px', editable: true, editType: 'select',
+    { field: 'quantity', header: '数量', width: '80px', editable: true, editType: 'number', align: 'right' },
+    { field: 'unitPrice', header: '单价', width: '90px', editable: true, editType: 'number', align: 'right' },
+    {
+      field: 'discount', header: '折扣', width: '70px', editable: true, editType: 'number',
+      format: (v) => v != null ? `${((v as number) * 100).toFixed(0)}%` : '0%'
+    },
+    { field: 'cost', header: '成本', width: '90px', editable: true, editType: 'number', align: 'right' },
+    { field: 'subtotal', header: '小计', virtual: true, width: '100px', align: 'right' },
+    { field: 'amount', header: '实付金额', virtual: true, width: '110px', align: 'right' },
+    {
+      field: 'profit', header: '利润', virtual: true, width: '100px', align: 'right',
+      format: (v) => v != null ? `¥${(v as number).toFixed(2)}` : ''
+    },
+    {
+      field: 'status', header: '状态', width: '90px', editable: true, editType: 'select',
       editOptions: [
         { value: 'pending', label: '待处理' },
         { value: 'processing', label: '处理中' },
@@ -863,24 +654,27 @@ export class DemoComponent implements OnInit {
 
   orderData: Record<string, RawValue>[] = [];
 
-  // ── Tab 3: 过滤与搜索 ────────────────────────────────────────────────────
+  // ── Tab 3 & 4: 销售数据（过滤 + 聚合共用）───────────────────────────────
 
   salesConfig: DataStoreConfig = {
     name: 'sales',
     fields: [
       { name: 'id', type: 'number' },
-      { name: 'region', type: 'string', displayName: '地区' },
-      { name: 'product', type: 'string', displayName: '产品' },
-      { name: 'sales', type: 'number', displayName: '销售额' },
-      { name: 'cost', type: 'number', displayName: '成本' },
-      { name: 'profit', type: 'virtual', virtual: true, displayName: '利润',
-        formula: (row) => (row.raw['sales'] as number) - (row.raw['cost'] as number) },
+      { name: 'region', type: 'string' },
+      { name: 'product', type: 'string' },
+      { name: 'sales', type: 'number' },
+      { name: 'cost', type: 'number' },
+      {
+        name: 'profit', type: 'virtual', virtual: true,
+        formula: (row) => (row.raw['sales'] as number) - (row.raw['cost'] as number)
+      },
     ],
   };
 
   salesColumns: ColumnConfig[] = [
     { field: 'id', header: 'ID', width: '60px' },
-    { field: 'region', header: '地区', filterType: 'select', filterable: true,
+    {
+      field: 'region', header: '地区', filterType: 'select', filterable: true,
       filterOptions: [
         { value: '华北', label: '华北' },
         { value: '华东', label: '华东' },
@@ -890,18 +684,15 @@ export class DemoComponent implements OnInit {
       ]
     },
     { field: 'product', header: '产品', filterType: 'text', filterable: true },
-    { field: 'sales', header: '销售额', align: 'right', filterType: 'number',
-      aggregate: { type: 'sum', precision: 2 } },
-    { field: 'cost', header: '成本', align: 'right', filterType: 'number',
-      aggregate: { type: 'sum', precision: 2 } },
-    { field: 'profit', header: '利润', virtual: true, align: 'right',
-      aggregate: { type: 'sum', precision: 2 } },
+    { field: 'sales', header: '销售额', align: 'right', filterType: 'number' },
+    { field: 'cost', header: '成本', align: 'right', filterType: 'number' },
+    { field: 'profit', header: '利润', virtual: true, align: 'right' },
   ];
 
-  // 带聚合的列配置
   salesAggColumns: ColumnConfig[] = [
     { field: 'id', header: 'ID', width: '60px' },
-    { field: 'region', header: '地区', filterType: 'select', filterable: true,
+    {
+      field: 'region', header: '地区', filterType: 'select', filterable: true,
       filterOptions: [
         { value: '华北', label: '华北' },
         { value: '华东', label: '华东' },
@@ -911,12 +702,9 @@ export class DemoComponent implements OnInit {
       ]
     },
     { field: 'product', header: '产品', filterType: 'text', filterable: true },
-    { field: 'sales', header: '销售额', align: 'right', filterType: 'number',
-      aggregate: { type: 'sum', precision: 2 } },
-    { field: 'cost', header: '成本', align: 'right', filterType: 'number',
-      aggregate: { type: 'sum', precision: 2 } },
-    { field: 'profit', header: '利润', virtual: true, align: 'right',
-      aggregate: { type: 'sum', precision: 2 } },
+    { field: 'sales', header: '销售额', align: 'right', filterType: 'number' },
+    { field: 'cost', header: '成本', align: 'right', filterType: 'number' },
+    { field: 'profit', header: '利润', virtual: true, align: 'right' },
   ];
 
   salesTableConfig: TableConfig = {
@@ -951,17 +739,18 @@ export class DemoComponent implements OnInit {
     name: 'fullconfig',
     fields: [
       { name: 'id', type: 'number', required: true },
-      { name: 'name', type: 'string', required: true, displayName: '名称' },
-      { name: 'category', type: 'string', displayName: '分类' },
-      { name: 'price', type: 'number', displayName: '价格' },
-      { name: 'stock', type: 'number', displayName: '库存' },
+      { name: 'name', type: 'string', required: true },
+      { name: 'category', type: 'string' },
+      { name: 'price', type: 'number' },
+      { name: 'stock', type: 'number' },
     ],
   };
 
   fullConfigColumns: ColumnConfig[] = [
     { field: 'id', header: 'ID', width: '60px', filterable: false },
     { field: 'name', header: '名称', editable: true, filterable: true },
-    { field: 'category', header: '分类', editable: true, filterType: 'select',
+    {
+      field: 'category', header: '分类', editable: true, filterType: 'select',
       filterOptions: [
         { value: '电子产品', label: '电子产品' },
         { value: '服装', label: '服装' },
@@ -969,10 +758,8 @@ export class DemoComponent implements OnInit {
         { value: '图书', label: '图书' },
       ]
     },
-    { field: 'price', header: '价格', editable: true, editType: 'number', align: 'right',
-      aggregate: { type: 'avg', precision: 2 } },
-    { field: 'stock', header: '库存', editable: true, editType: 'number', align: 'right',
-      aggregate: { type: 'sum', precision: 0 } },
+    { field: 'price', header: '价格', editable: true, editType: 'number', align: 'right' },
+    { field: 'stock', header: '库存', editable: true, editType: 'number', align: 'right' },
   ];
 
   fullConfigTableConfig: TableConfig = {
@@ -1006,61 +793,60 @@ export class DemoComponent implements OnInit {
   // ── 配置代码展示 ─────────────────────────────────────────────────────────
 
   configCode = `
-    // 完整配置示例
-    const tableConfig: TableConfig = {
-      title: '完整配置示例',
-      showTitle: true,
-      showToolbar: true,          // 显示工具栏
-      showGlobalSearch: true,      // 全局搜索框
-      showColumnFilter: true,     // 列过滤行
-      showPaginator: true,        // 分页器
-      selectionMode: 'multiple',  // 多选模式
+// 完整配置示例
+const tableConfig: TableConfig = {
+  title: '完整配置示例',
+  showToolbar: true,
+  showGlobalSearch: true,
+  showColumnFilter: true,
+  showPaginator: true,
+  selectionMode: 'multiple',
 
-      toolbarActions: {
-        add: { icon: 'add', label: '新增' },     // 新增按钮
-        delete: { icon: 'delete', label: '删除' }, // 删除按钮
-        refresh: true,                           // 刷新按钮
-        export: { icon: 'download', label: '导出',
-                  formats: ['csv', 'json'] },   // 导出按钮
-        custom: [                                // 自定义按钮
-          { id: 'clone', icon: 'content_copy', label: '复制', action: 'clone' },
-          { id: 'share', icon: 'share', label: '分享', action: 'share' },
-        ],
-      },
+  toolbarActions: {
+    add: { icon: 'add', label: '新增' },
+    delete: { icon: 'delete', label: '删除' },
+    refresh: true,
+    export: { icon: 'download', label: '导出',
+              formats: ['csv', 'json'] },
+    custom: [
+      { id: 'clone', icon: 'content_copy', label: '复制' },
+      { id: 'share', icon: 'share', label: '分享' },
+    ],
+  },
 
-      pagination: {
-        pageSizeOptions: [10, 25, 50, 100],
-        defaultPageSize: 10,
-        showPageSizeSelector: true,  // 每页数量选择器
-        showTotalCount: true,         // 显示总数
-      },
-    };
+  pagination: {
+    pageSizeOptions: [10, 25, 50, 100],
+    defaultPageSize: 10,
+    showPageSizeSelector: true,
+    showTotalCount: true,
+  },
+};
 
-    const columns: ColumnConfig[] = [
-      { field: 'name', header: '名称', editable: true, filterable: true,
-        filterType: 'text' },
-      { field: 'category', header: '分类', editable: true,
-        filterType: 'select',
-        filterOptions: [
-          { value: '电子产品', label: '电子产品' },
-          { value: '服装', label: '服装' },
-        ]},
-      { field: 'price', header: '价格', editable: true, editType: 'number',
-        align: 'right', aggregate: { type: 'avg', precision: 2 } },
-      { field: 'stock', header: '库存', editable: true, editType: 'number',
-        align: 'right', aggregate: { type: 'sum', precision: 0 } },
-    ];
+const columns: ColumnConfig[] = [
+  { field: 'name', header: '名称', editable: true, filterable: true,
+    filterType: 'text' },
+  { field: 'category', header: '分类', editable: true,
+    filterType: 'select',
+    filterOptions: [
+      { value: '电子产品', label: '电子产品' },
+      { value: '服装', label: '服装' },
+    ]},
+  { field: 'price', header: '价格', editable: true, editType: 'number',
+    align: 'right', aggregate: { type: 'avg', precision: 2 } },
+  { field: 'stock', header: '库存', editable: true, editType: 'number',
+    align: 'right', aggregate: { type: 'sum', precision: 0 } },
+];
 
-    const datastoreConfig: DataStoreConfig = {
-      name: 'products',
-      fields: [
-        { name: 'id', type: 'number', required: true },
-        { name: 'name', type: 'string', required: true },
-        { name: 'category', type: 'string' },
-        { name: 'price', type: 'number' },
-        { name: 'stock', type: 'number' },
-      ],
-    };
+const datastoreConfig: DataStoreConfig = {
+  name: 'products',
+  fields: [
+    { name: 'id', type: 'number', required: true },
+    { name: 'name', type: 'string', required: true },
+    { name: 'category', type: 'string' },
+    { name: 'price', type: 'number' },
+    { name: 'stock', type: 'number' },
+  ],
+};
   `;
 
   // ── 生命周期 ─────────────────────────────────────────────────────────────
@@ -1098,11 +884,11 @@ export class DemoComponent implements OnInit {
     this.orderData = [
       { id: 1001, product: 'iPhone 15 Pro Max', spec: '256GB 深空黑', quantity: 2, unitPrice: 9999, discount: 0.05, cost: 7500, status: 'completed' },
       { id: 1002, product: 'MacBook Pro 14"', spec: 'M3 Pro 18+512', quantity: 1, unitPrice: 19999, discount: 0, cost: 15000, status: 'processing' },
-      { id: 1003, product: 'AirPods Pro 2', spec: 'USB-C 充电盒', quantity: 5, unitPrice: 1899, discount: 0.1, cost: 1200, status: 'completed' },
+      { id: 1003, product: 'AirPods Pro 2', spec: 'USB-C 充电盒', quantity: 5, unitPrice: 1899, discount: 0.10, cost: 1200, status: 'completed' },
       { id: 1004, product: 'iPad Air 5', spec: '64GB WiFi', quantity: 3, unitPrice: 4399, discount: 0.08, cost: 3000, status: 'pending' },
       { id: 1005, product: 'Apple Watch Ultra 2', spec: '钛金属表壳', quantity: 2, unitPrice: 5999, discount: 0, cost: 4000, status: 'completed' },
       { id: 1006, product: 'Sony WH-1000XM5', spec: '无线降噪耳机', quantity: 4, unitPrice: 2499, discount: 0.15, cost: 1500, status: 'completed' },
-      { id: 1007, product: 'Samsung 990 Pro 2TB', spec: 'NVMe SSD', quantity: 10, unitPrice: 1499, discount: 0.1, cost: 900, status: 'processing' },
+      { id: 1007, product: 'Samsung 990 Pro 2TB', spec: 'NVMe SSD', quantity: 10, unitPrice: 1499, discount: 0.10, cost: 900, status: 'processing' },
       { id: 1008, product: 'Logitech MX Master 3S', spec: '无线鼠标', quantity: 8, unitPrice: 799, discount: 0.05, cost: 400, status: 'completed' },
       { id: 1009, product: 'Keychron Q1 Pro', spec: '机械键盘 87键', quantity: 3, unitPrice: 1299, discount: 0, cost: 700, status: 'pending' },
       { id: 1010, product: 'Dell U2723QE', spec: '4K IPS 显示器', quantity: 2, unitPrice: 3999, discount: 0.12, cost: 2800, status: 'completed' },
@@ -1140,25 +926,21 @@ export class DemoComponent implements OnInit {
     }));
   }
 
-  // ── Tab 1: 基础操作 ───────────────────────────────────────────────────────
+  // ── Tab 1 操作 ──────────────────────────────────────────────────────────
 
   addEmployee(): void {
     const maxId = Math.max(...this.employeeData.map(e => e['id'] as number), 0);
-    const newRow = {
-      id: maxId + 1,
-      name: '新员工',
-      department: '技术部',
-      position: '工程师',
-      email: 'new@example.com',
-      salary: 15000,
-      hireDate: new Date().toISOString().split('T')[0],
-      active: true,
-    };
-    this.basicTable.addRow(newRow as Record<string, RawValue>);
+    this.basicTable.addRow({
+      id: maxId + 1, name: '新员工', department: '技术部',
+      position: '工程师', email: 'new@example.com',
+      salary: 15000, hireDate: new Date().toISOString().split('T')[0], active: true,
+    });
   }
 
   deleteSelected(): void {
-    const count = this.basicTable.getService().deleteSelected();
+    const svc = this.basicTable.getService();
+    const ids = [...svc.state().selectedRows];
+    ids.forEach(id => svc.deleteRow(id));
     this.updateStats();
   }
 
@@ -1166,175 +948,154 @@ export class DemoComponent implements OnInit {
     this.loadEmployeeData();
     this.validationResult.set(null);
     this.diffUpdates.set([]);
-    this.basicTable.setData(this.employeeData as Record<string, RawValue>[]);
+    this.basicTable.setData(this.employeeData);
   }
 
-  exportCSV(): void {
-    this.basicTable.exportData('csv');
-  }
-
-  exportJSON(): void {
-    this.basicTable.exportData('json');
-  }
+  exportCSV(): void { this.basicTable.exportData('csv'); }
+  exportJSON(): void { this.basicTable.exportData('json'); }
 
   validateTable(): void {
     const result = this.basicTable.validate();
     this.validationResult.set(result);
     if (result.valid) {
-      this.showSnackBar('校验通过 ✓');
+      this.openSnackBar('校验通过');
+    } else {
+      this.openSnackBar(`校验失败：${result.errors.length} 个错误`);
     }
   }
 
   showDiff(): void {
-    const updates = this.basicTable.generateUpdates();
-    this.diffUpdates.set(updates);
+    this.diffUpdates.set(this.basicTable.generateUpdates());
   }
 
-  clearDiff(): void {
-    this.diffUpdates.set([]);
-  }
+  clearDiff(): void { this.diffUpdates.set([]); }
 
   commitChanges(): void {
     this.basicTable.commit();
     this.diffUpdates.set([]);
-    this.showSnackBar('变更已提交 ✓');
+    this.openSnackBar('变更已提交');
   }
 
-  // ── Tab 2: 虚拟列操作 ────────────────────────────────────────────────────
+  // ── Tab 2 操作 ──────────────────────────────────────────────────────────
 
   addOrder(): void {
     const maxId = Math.max(...this.orderData.map(o => o['id'] as number), 0);
-    const newRow = {
-      id: maxId + 1,
-      product: '新商品',
-      spec: '默认规格',
-      quantity: 1,
-      unitPrice: 100,
-      discount: 0,
-      cost: 50,
-      status: 'pending',
-    };
-    this.virtualTable.addRow(newRow as Record<string, RawValue>);
+    this.virtualTable.addRow({
+      id: maxId + 1, product: '新商品', spec: '默认规格',
+      quantity: 1, unitPrice: 100, discount: 0, cost: 50, status: 'pending',
+    });
   }
 
-  // ── Tab 3: 过滤操作 ──────────────────────────────────────────────────────
+  resetOrderData(): void {
+    this.loadOrderData();
+    this.virtualTable.setData(this.orderData);
+    this.aggResults.set([]);
+  }
 
-  clearAllFilters(): void {
+  // ── Tab 3 操作 ──────────────────────────────────────────────────────────
+
+  clearFilters(): void {
     this.filterTable.getService().clearAllFilters();
   }
 
-  // ── Tab 4: 聚合操作 ──────────────────────────────────────────────────────
+  // ── Tab 4 操作 ──────────────────────────────────────────────────────────
 
   computeAggregations(): void {
     const svc = this.aggTable.getService();
-
-    // 注册聚合公式
     const formulas: AggregationFormula[] = [
-      { id: 'total_sales', name: '总销售额', type: 'sum', field: 'sales' },
-      { id: 'total_cost', name: '总成本', type: 'sum', field: 'cost' },
-      { id: 'total_profit', name: '总利润', type: 'sum', field: 'profit' },
-      { id: 'avg_price', name: '平均销售额', type: 'avg', field: 'sales' },
-      { id: 'product_count', name: '产品数', type: 'count', field: 'id' },
+      { id: 'total_sales', name: 'total_sales', type: 'sum', field: 'sales' },
+      { id: 'total_cost', name: 'total_cost', type: 'sum', field: 'cost' },
+      { id: 'total_profit', name: 'total_profit', type: 'sum', field: 'profit' },
+      { id: 'avg_sales', name: 'avg_sales', type: 'avg', field: 'sales' },
+      { id: 'count', name: 'count', type: 'count', field: 'id' },
     ];
-
     formulas.forEach(f => svc.registerAggregation(f));
-
-    // 计算并显示结果
     const results = svc.computeAllAggregations();
     const labels: Record<string, string> = {
-      total_sales: '总销售额',
-      total_cost: '总成本',
-      total_profit: '总利润',
-      avg_price: '平均销售额',
-      product_count: '产品数',
+      total_sales: '总销售额', total_cost: '总成本',
+      total_profit: '总利润', avg_sales: '平均销售额', count: '产品数',
     };
-
     this.aggResults.set(
       Object.entries(results).map(([id, r]) => ({
-        formulaId: id,
-        label: labels[id] || id,
-        value: r.value as number,
+        formulaId: id, label: labels[id] || id, value: r.value as number,
       }))
     );
   }
 
-  clearAggregations(): void {
-    this.aggResults.set([]);
-  }
+  clearAggregations(): void { this.aggResults.set([]); }
 
-  // ── Tab 5: 行操作 ─────────────────────────────────────────────────────────
+  // ── Tab 5 操作 ──────────────────────────────────────────────────────────
 
-  showDeletedRows(): void {
+  addRowToDemo(): void {
     const svc = this.rowOpsTable.getService();
-    const stats = svc.getDataStore().getStats();
-    console.log('删除缓冲区:', stats.deleted);
+    const stats = svc.getStats();
+    const maxId = svc.getDataStore().getRowCount();
+    svc.addRow({
+      id: maxId + 1, name: '新行', department: '技术部',
+      position: '员工', email: 'new@example.com',
+      salary: 15000, hireDate: new Date().toISOString().split('T')[0], active: true,
+    });
+    this.updateRowOpsStats();
   }
 
-  restoreLast(): void {
-    this.rowOpsTable.getService().restoreRow(0); // 恢复最新删除
-    this.updateRowOpsStats();
+  deleteLastRow(): void {
+    const svc = this.rowOpsTable.getService();
+    const rows = svc.getDataStore().getRows();
+    if (rows.length > 0) {
+      svc.deleteRow(rows[rows.length - 1].id);
+      this.updateRowOpsStats();
+    }
   }
 
   updateRowOpsStats(): void {
     const svc = this.rowOpsTable.getService();
-    const stats = svc.getDataStore().getStats();
-    this.deletedCount.set(stats.deleted.count);
+    const stats = svc.getStats();
     this.mainCount.set(stats.main.count);
     this.filteredCount.set(stats.filtered.count);
+    this.deletedCount.set(stats.deleted.count);
   }
 
-  // ── Tab 6: 完整配置操作 ──────────────────────────────────────────────────
+  // ── Tab 6 操作 ──────────────────────────────────────────────────────────
 
-  onFullConfigAction(event: ToolbarEvent): void {
-    this.showSnackBar(`自定义操作: ${event.action.type} - ${event.action.id || ''}`);
+  onFullConfigAction(event: { action: ToolbarAction }): void {
+    if (event.action.type === 'custom' && event.action.id) {
+      this.openSnackBar(`自定义操作：${event.action.id}`);
+    }
   }
 
   // ── 事件处理 ──────────────────────────────────────────────────────────────
 
   onRowAdded(row: DataRow): void {
-    console.log('新增行:', row);
+    console.log('[Demo] 行已添加:', row.id);
     this.updateStats();
   }
 
   onRowUpdated(event: { row: DataRow; changes: Record<string, unknown> }): void {
-    console.log('更新行:', event);
+    console.log('[Demo] 行已更新:', event.row.id, event.changes);
     this.diffUpdates.set(this.basicTable.generateUpdates());
     this.updateStats();
   }
 
   onRowDeleted(rowId: RowId): void {
-    console.log('删除行 ID:', rowId);
+    console.log('[Demo] 行已删除:', rowId);
     this.updateStats();
+    this.updateRowOpsStats();
   }
 
-  onToolbarAction(event: ToolbarEvent): void {
-    console.log('工具栏操作:', event);
-    if (event.action.type === 'add') {
-      this.showSnackBar('点击了新增按钮');
-    } else if (event.action.type === 'custom' && event.action.id) {
-      this.showSnackBar(`自定义操作: ${event.action.id}`);
-    }
+  onToolbarAction(event: { action: ToolbarAction }): void {
+    console.log('[Demo] 工具栏操作:', event);
+    if (event.action.type === 'add') this.openSnackBar('新增操作');
   }
 
-  onRowClicked(event: { row: DataRow; event: MouseEvent }): void {
-    console.log('行点击:', event.row.id);
-  }
+  // ── 辅助 ──────────────────────────────────────────────────────────────────
 
-  onSelectionChanged(selected: Set<number>): void {
-    this.hasSelection.set(selected.size > 0);
-    this.selectionCount.set(selected.size);
-  }
-
-  // ── 辅助方法 ─────────────────────────────────────────────────────────────
-
-  updateStats(): void {
-    const svc = this.basicTable.getService();
-    const stats = svc.getDataStore().getStats();
+  private updateStats(): void {
+    const stats = this.basicTable.getService().getStats();
     this.deletedCount.set(stats.deleted.count);
   }
 
-  private showSnackBar(message: string, duration = 3000): void {
-    // 使用 window alert 代替 snackbar（避免重复导入）
-    console.log(message);
+  private openSnackBar(message: string, duration = 3000): void {
+    // 用 alert 代替（避免 MatSnackBar 依赖问题）
+    console.log('[SnackBar]', message);
   }
 }

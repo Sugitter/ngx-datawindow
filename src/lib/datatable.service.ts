@@ -354,4 +354,8 @@ export class DataTableService {
   commit(): void {
     this._ds.clearUpdates();
   }
+
+  getStats() {
+    return this._ds.getStats();
+  }
 }
