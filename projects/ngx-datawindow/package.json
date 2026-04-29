@@ -2,6 +2,10 @@
   "name": "ngx-datawindow",
   "version": "1.0.1",
   "description": "Angular DataWindow component inspired by PowerBuilder DataWindow",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sugitter/ngx-datawindow.git"
+  },
   "peerDependencies": {
     "@angular/cdk": ">=17.0.0",
     "@angular/common": ">=17.0.0",

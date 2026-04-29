@@ -2,6 +2,10 @@
   "name": "ngx-datawindow",
   "version": "1.0.1",
   "description": "Angular DataWindow component inspired by PowerBuilder DataWindow — DataStore engine, virtual computed columns, column-level change tracking, offline persistence, and optimistic locking.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sugitter/ngx-datawindow.git"
+  },
   "scripts": {
     "build": "ng-packagr -p projects/ngx-datawindow/ng-package.json",
     "build:lib": "ng-packagr -p projects/ngx-datawindow/ng-package.json",

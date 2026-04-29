@@ -6,7 +6,7 @@ Bringing PowerBuilder DataWindow's design philosophy to the modern web era.
 
 [![npm version](https://img.shields.io/npm/v/ngx-datawindow.svg)](https://www.npmjs.com/package/ngx-datawindow)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Test Status](https://img.shields.io/badge/tests-51%2F51-green)](https://github.com/Sugitter/ngx-datawindow)
+[![Test Status](https://img.shields.io/badge/tests-51%2F51-green)](https://github.com/sugitter/ngx-datawindow)
 
 ---
 
