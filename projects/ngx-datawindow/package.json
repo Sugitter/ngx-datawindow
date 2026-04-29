@@ -1,0 +1,15 @@
+{
+  "name": "ngx-datawindow",
+  "version": "1.0.0",
+  "description": "Angular DataWindow component inspired by PowerBuilder DataWindow",
+  "peerDependencies": {
+    "@angular/cdk": ">=17.0.0",
+    "@angular/common": ">=17.0.0",
+    "@angular/core": ">=17.0.0",
+    "@angular/material": ">=17.0.0",
+    "@angular/forms": ">=17.0.0"
+  },
+  "dependencies": {
+    "tslib": "^2.6.0"
+  }
+}

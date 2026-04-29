@@ -1,0 +1,435 @@
+/**
+ * ngx-datawindow Demo - Material Design 统一样式
+ * 
+ * 设计原则：
+ * - 紧凑型界面，适合数据密集型应用
+ * - 统一的高度、间距、圆角
+ * - 清晰的视觉层次
+ */
+
+/* ==================== 基础重置 ==================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, 
+    "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #212121;
+  background: #fafafa;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ==================== 变量定义 ==================== */
+:root {
+  /* 尺寸 */
+  --control-height: 32px;
+  --control-height-sm: 28px;
+  --control-height-lg: 36px;
+  --border-radius: 4px;
+  --border-radius-sm: 2px;
+  --border-radius-lg: 6px;
+  
+  /* 间距 */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  
+  /* 字体 */
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-md: 14px;
+  --font-size-lg: 15px;
+  
+  /* 颜色 */
+  --color-primary: #1976d2;
+  --color-primary-light: #e3f2fd;
+  --color-accent: #7c4dff;
+  --color-warn: #f44336;
+  --color-success: #4caf50;
+  --color-border: #e0e0e0;
+  --color-border-light: #f0f0f0;
+  --color-bg: #ffffff;
+  --color-bg-hover: #f5f5f5;
+  --color-text: #212121;
+  --color-text-secondary: #757575;
+  --color-text-disabled: #9e9e9e;
+  
+  /* 表格网格线 */
+  --table-grid-color: #e0e0e0;
+  --table-grid-width: 1px;
+}
+
+/* ==================== Material 表单控件 ==================== */
+
+/* Form Field */
+.mat-mdc-form-field {
+  font-size: var(--font-size-md) !important;
+}
+
+.mat-mdc-form-field-subscript-wrapper {
+  display: none !important;
+}
+
+.mat-mdc-text-field-wrapper {
+  padding: 0 var(--spacing-xs) !important;
+  background: var(--color-bg) !important;
+}
+
+.mat-mdc-form-field-infix {
+  min-height: var(--control-height) !important;
+  padding: 4px 0 !important;
+}
+
+.mat-mdc-floating-label {
+  font-size: var(--font-size-md) !important;
+  top: 18px !important;
+}
+
+input.mat-mdc-input-element {
+  font-size: var(--font-size-md) !important;
+  padding: 0 !important;
+  height: auto !important;
+}
+
+/* Select */
+.mat-mdc-select {
+  font-size: var(--font-size-md) !important;
+}
+
+.mat-mdc-select-trigger {
+  height: 26px !important;
+  padding-top: 3px !important;
+}
+
+.mat-mdc-select-value {
+  font-size: var(--font-size-md) !important;
+}
+
+/* ==================== Material 按钮 ==================== */
+.mat-mdc-button,
+.mat-mdc-raised-button,
+.mat-mdc-outlined-button,
+.mat-mdc-unelevated-button {
+  height: var(--control-height) !important;
+  min-width: auto !important;
+  padding: 0 var(--spacing-md) !important;
+  font-size: var(--font-size-md) !important;
+  font-weight: 500 !important;
+  border-radius: var(--border-radius) !important;
+  line-height: var(--control-height) !important;
+}
+
+.mat-mdc-button .mdc-button__label,
+.mat-mdc-raised-button .mdc-button__label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.mat-mdc-icon-button {
+  width: var(--control-height) !important;
+  height: var(--control-height) !important;
+  line-height: var(--control-height) !important;
+  border-radius: var(--border-radius) !important;
+}
+
+.mat-mdc-icon-button .mat-icon {
+  font-size: 20px !important;
+  width: 20px !important;
+  height: 20px !important;
+}
+
+button mat-icon,
+a mat-icon {
+  font-size: 18px !important;
+  width: 18px !important;
+  height: 18px !important;
+  margin-right: var(--spacing-xs);
+}
+
+/* ==================== Material 表格 ==================== */
+.mat-mdc-table {
+  width: 100%;
+  border: var(--table-grid-width) solid var(--table-grid-color);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  border-collapse: collapse;
+}
+
+/* 表头 */
+.mat-mdc-header-row {
+  height: var(--control-height-lg) !important;
+  background: #fafafa !important;
+}
+
+.mat-mdc-header-cell {
+  font-size: var(--font-size-md) !important;
+  font-weight: 600 !important;
+  color: var(--color-text) !important;
+  padding: 0 var(--spacing-sm) !important;
+  border-bottom: var(--table-grid-width) solid var(--table-grid-color) !important;
+  border-right: var(--table-grid-width) solid var(--table-grid-color) !important;
+  background: #fafafa;
+}
+
+.mat-mdc-header-cell:last-child {
+  border-right: none !important;
+}
+
+/* 数据行 */
+.mat-mdc-row {
+  height: var(--control-height-lg) !important;
+  transition: background-color 0.15s ease;
+}
+
+.mat-mdc-row:hover {
+  background: var(--color-bg-hover) !important;
+}
+
+.mat-mdc-cell {
+  font-size: var(--font-size-md) !important;
+  color: var(--color-text) !important;
+  padding: 0 var(--spacing-sm) !important;
+  border-bottom: var(--table-grid-width) solid var(--table-grid-color) !important;
+  border-right: var(--table-grid-width) solid var(--table-grid-color) !important;
+}
+
+.mat-mdc-cell:last-child {
+  border-right: none !important;
+}
+
+/* 选中行 */
+.mat-mdc-row.dt-row-selected,
+.mat-mdc-row.selected {
+  background: var(--color-primary-light) !important;
+}
+
+/* 新增行 */
+.mat-mdc-row.dt-row-new {
+  background: #e8f5e9 !important;
+}
+
+/* 修改行 */
+.mat-mdc-row.dt-row-modified {
+  background: #fff8e1 !important;
+}
+
+/* 删除行 */
+.mat-mdc-row.dt-row-deleted {
+  background: #ffebee !important;
+  opacity: 0.6;
+}
+
+/* 空状态 */
+.mat-mdc-cell.dt-empty {
+  text-align: center;
+  padding: var(--spacing-lg) !important;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-md);
+}
+
+/* ==================== Material 分页器 ==================== */
+.mat-mdc-paginator {
+  min-height: var(--control-height-lg) !important;
+  background: #fafafa !important;
+  border-top: 1px solid var(--color-border);
+}
+
+.mat-mdc-paginator-container {
+  min-height: var(--control-height-lg) !important;
+  padding: 0 var(--spacing-sm) !important;
+}
+
+.mat-mdc-paginator-page-size-select {
+  width: 60px !important;
+}
+
+.mat-mdc-paginator-range-label {
+  font-size: var(--font-size-sm) !important;
+  margin: 0 var(--spacing-sm) !important;
+}
+
+/* ==================== Material 卡片 ==================== */
+.mat-mdc-card {
+  border-radius: var(--border-radius-lg) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+
+.mat-mdc-card-header {
+  padding: var(--spacing-sm) var(--spacing-md) !important;
+}
+
+.mat-mdc-card-title {
+  font-size: var(--font-size-lg) !important;
+  font-weight: 600 !important;
+  margin-bottom: 0 !important;
+}
+
+.mat-mdc-card-subtitle {
+  font-size: var(--font-size-sm) !important;
+  margin-top: var(--spacing-xs) !important;
+}
+
+.mat-mdc-card-content {
+  padding: var(--spacing-md) !important;
+}
+
+.mat-mdc-card-content:first-child {
+  padding-top: var(--spacing-md) !important;
+}
+
+/* ==================== Material 标签页 ==================== */
+.mat-mdc-tab-header {
+  background: #fafafa;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.mat-mdc-tab {
+  height: var(--control-height-lg) !important;
+  min-width: 80px !important;
+  padding: 0 var(--spacing-md) !important;
+  font-size: var(--font-size-sm) !important;
+  font-weight: 500 !important;
+}
+
+.mat-mdc-tab .mdc-tab__text-label {
+  font-size: var(--font-size-sm) !important;
+}
+
+.mat-mdc-tab-group {
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
+}
+
+/* ==================== Material 列表 ==================== */
+.mat-mdc-list-item {
+  height: var(--control-height-lg) !important;
+  padding: 0 var(--spacing-md) !important;
+  border-radius: var(--border-radius) !important;
+  margin: 1px 0 !important;
+}
+
+.mat-mdc-list-item:hover {
+  background: var(--color-bg-hover);
+}
+
+.mat-mdc-list-item .mdc-list-item__primary-text {
+  font-size: var(--font-size-sm) !important;
+}
+
+.mat-mdc-list-item.mdc-list-item--activated {
+  background: var(--color-primary-light) !important;
+}
+
+.mat-mdc-list-item.mdc-list-item--activated .mdc-list-item__primary-text {
+  color: var(--color-primary) !important;
+  font-weight: 500 !important;
+}
+
+/* ==================== Material 复选框 ==================== */
+.mat-mdc-checkbox {
+  --mdc-checkbox-state-layer-size: 18px;
+}
+
+.mat-mdc-checkbox .mdc-checkbox {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+.mat-mdc-checkbox .mdc-checkbox__native-control {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+.mat-mdc-checkbox .mdc-checkbox__background {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+/* ==================== Material 图标按钮 ==================== */
+.mat-mdc-icon-button.mat-unthemed {
+  --mdc-icon-button-state-layer-size: var(--control-height);
+}
+
+/* ==================== Material Tooltip ==================== */
+.mat-mdc-tooltip {
+  font-size: var(--font-size-sm) !important;
+  padding: var(--spacing-xs) var(--spacing-sm) !important;
+}
+
+/* ==================== Material 进度条 ==================== */
+.mat-mdc-progress-spinner {
+  --mdc-circular-progress-active-indicator-color: var(--color-primary);
+}
+
+/* ==================== Material 菜单 ==================== */
+.mat-mdc-menu-content {
+  padding: var(--spacing-xs) 0 !important;
+}
+
+.mat-mdc-menu-item {
+  height: var(--control-height) !important;
+  font-size: var(--font-size-sm) !important;
+  padding: 0 var(--spacing-md) !important;
+}
+
+/* ==================== 滚动条样式 ==================== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #bdbdbd;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9e9e9e;
+}
+
+/* ==================== 工具类 ==================== */
+.no-shadow {
+  box-shadow: none !important;
+}
+
+.no-border {
+  border: none !important;
+}
+
+.flat {
+  border: 1px solid var(--color-border) !important;
+  box-shadow: none !important;
+  border-radius: var(--border-radius) !important;
+}
+
+/* ==================== 打印样式 ==================== */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .mat-mdc-card {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+  }
+  
+  .mat-mdc-table {
+    border: 1px solid #ccc !important;
+  }
+}
