@@ -1,107 +1,102 @@
-# ngx-datawindow v1.1.0 开发计划
+# ngx-datawindow Roadmap
 
-> 基于 @swimlane/ngx-datatable (4669 stars) 架构分析，2026-04-29 制定
+> Last updated: 2026-04-29
 
-## 阶段 A（1-2天）：基础设施增强
+## Current Status
 
-### Feature 4: 多选模式增强
-**参考 ngx-datatable SelectionType**:
-```typescript
-enum SelectionType {
-  single     = 'single',     // 单选（单击行选中）
-  multi      = 'multi',      // 多选（Ctrl/Shift + 点击）
-  multiClick = 'multiClick', // 点击即多选
-  checkbox   = 'checkbox',  // 复选框（已有）
-  cell       = 'cell',       // 单元格选择
-}
-```
-**实现要点**:
-- DataTableService 增加 `setSelectionType(type)` 方法
-- Ctrl+点击追加选择，Shift+点击范围选择
-- `selectedRows: Set<RowId>` 输出事件
-
-### Feature 5: 列固定 (Column Pinning)
-**参考 ngx-datatable**: `frozenLeft`, `frozenRight`
-```typescript
-{ field: 'id', header: 'ID', frozenLeft: true }
-{ field: 'actions', header: '操作', frozenRight: true }
-```
-**实现要点**:
-- CDK Virtual Scroll 不支持多列 sticky，用三个 table 分别渲染 left/center/right
-- 或用 CSS `position: sticky` 配合 `z-index`
+| 项目 | 状态 |
+|------|------|
+| 核心功能 | ✅ Phase 1 完成 |
+| 离线持久化 | ✅ Phase 2 完成 (51 tests) |
+| Demo | ✅ 9 个示例页面 |
+| npm 发布 | ⏳ v1.1.0 待发布 |
+| 文档 | 📝 README + 6 篇设计文档 |
 
 ---
 
-## 阶段 B（2-3天）：高级特性
+## Phase 3: 功能增强 (v1.2.0)
 
-### Feature 3: 模板系统 (Template System)
-**参考 ngx-datatable**: `cellTemplate`, `headerTemplate`
-```
-<ngx-datawindow>
-  <!-- 单元格自定义 -->
-  <ng-template dtCell let-row let-col="col">
-    @if (col.field === 'avatar') { <img [src]="row.avatar"> }
-    @else if (col.field === 'actions') { <button>编辑</button> }
-    @else { {{ row[col.field] }} }
-  </ng-template>
+参考 ngx-datatable 架构，补齐核心能力：
 
-  <!-- 表头自定义 -->
-  <ng-template dtHeader let-col>
-    {{ col.header }}
-    @if (col.sortable) { <mat-icon>sort</mat-icon> }
-  </ng-template>
-
-  <!-- 行详情展开 -->
-  <ng-template dtDetail let-row>
-    详情信息: {{ row.description }}
-  </ng-template>
-</ngx-datawindow>
-```
-**实现要点**:
-- Angular `ContentChild` + `TemplateRef` 接收投影模板
-- CellContext / HeaderContext / RowDetailContext 接口
-- 支持 `ngTemplateOutlet` 动态渲染
-
-### Feature 1: 行分组 (Row Grouping)
-**参考 ngx-datatable**: `DatatableGroupHeaderDirective`
-```
-分组字段: category
-├── 电子产品 (5)
-│   ├── MacBook Pro ...
-│   └── iPhone 15 ...
-├── 办公用品 (3)
-└── ...
-```
-**实现要点**:
-- DataStore 增加 `groupBy(field)` 方法，按字段值分组
-- 组件增加 `groupHeaderTemplate` Input
-- 展开/折叠分组，聚合统计（count/sum/avg）
-- 分组行特殊样式（背景 #f5f5f5，加粗字体）
-
-### Feature 2: 树形展示 (Tree Display)
-**参考 ngx-datatable**: `isTreeColumn` + `treeLevelIndent`
-```
-├── 研发部
-│   ├── 前端组
-│   │   ├── 张三
-│   │   └── 李四
-│   └── 后端组
-└── ...
-```
-**实现要点**:
-- DataStore 增加 `treeData` 支持（`level`, `expanded`, `children`）
-- 组件增加 `treeColumn` Input（指定哪列显示展开箭头）
-- CDK Tree 或手写递归模板
-- 懒加载子节点支持（`loadChildren` callback）
-- 展开/折叠图标，支持 loading 状态
+| 功能 | 优先级 | 说明 |
+|------|--------|------|
+| **多选模式** | P0 | single/multi/multiClick/checkbox/cell 五种模式 |
+| **列冻结** | P0 | frozenLeft/frozenRight，左右固定列 |
+| **模板系统** | P1 | cellTemplate/headerTemplate/detailTemplate 自定义渲染 |
+| **行分组** | P1 | 按字段分组，可折叠 |
+| **树形展示** | P2 | 树状数据展开/折叠 |
+| **虚拟滚动优化** | P2 | Fenwick Tree 行高缓存，大数据量 |
 
 ---
 
-## 阶段 C（1天）
+## Phase 4: 生态完善 (v1.3.0)
 
-- Demo 截图更新
-- 文档更新
-- v1.1.0 release
+| 功能 | 优先级 | 说明 |
+|------|--------|------|
+| **文档网站** | P0 | GitHub Pages，API 文档，示例 |
+| **Demo 截图** | P0 | 用于 README 和文档 |
+| **单元测试覆盖** | P1 | 核心组件测试 |
+| **Angular CDK 集成** | P1 | 拖拽排序、虚拟滚动 |
+| **主题系统** | P2 | CSS 变量主题切换 |
+
+---
+
+## Phase 5: 示例丰富 (重点)
+
+**目标：覆盖更多真实使用场景，吸引用户**
+
+### 企业管理场景
+- [ ] 订单管理系统（订单列表、状态流转、批量操作）
+- [ ] 库存管理系统（库存预警、入库出库、盘点）
+- [ ] 客户关系管理 CRM（客户列表、跟进记录、标签筛选）
+- [ ] 人力资源 HR（员工档案、考勤、薪资）
+
+### 数据分析场景
+- [ ] 报表查看器（多维度筛选、导出、打印）
+- [ ] 日志查看器（实时刷新、关键词高亮、分页加载）
+- [ ] 财务报表（汇总、钻取、图表联动）
+
+### 协作办公场景
+- [ ] 任务看板（拖拽排序、状态切换、分配）
+- [ ] 审批流程（待办列表、批量审批、流程追踪）
+- [ ] 文档管理（分类、搜索、版本历史）
+
+### 移动端适配
+- [ ] 响应式布局示例
+- [ ] 触摸手势支持
+- [ ] 移动端筛选面板
+
+### 集成示例
+- [ ] 与后端 API 集成（REST/GraphQL）
+- [ ] 与状态管理集成（NgRx/SignalStore）
+- [ ] 与表单库集成（Angular Reactive Forms）
+- [ ] 与图表库集成（ECharts/Chart.js）
+
+---
+
+## 架构重构考虑
+
+参考 ngx-datatable 的设计，当前架构有一个核心问题：
+
+**现状：** DataStore 是核心，组件是壳
+**ngx-datatable：** 组件是核心，DataStore 是内部状态
+
+| 方案 | 优点 | 缺点 |
+|------|------|------|
+| 保持现状 | 已实现，稳定 | 状态同步复杂，扩展受限 |
+| 重构为组件核心 | 更灵活，模板/分组/树更好实现 | 工作量大，破坏性变更 |
+
+**建议：** 先完成 Phase 3 功能增强，验证现有架构能否支撑。如果遇到瓶颈再考虑重构。
+
+---
+
+## 下一步行动
+
+1. **网络恢复后** → 推送修复 + 发布 v1.1.1
+2. **丰富示例** → 企业管理、数据分析、协作办公场景
+3. **多选模式** → 扩展 SelectionType，支持 checkbox 列
+4. **列冻结** → sticky 定位实现
+5. **文档网站** → 用 VitePress 或 docusaurus
 
 ---
 
