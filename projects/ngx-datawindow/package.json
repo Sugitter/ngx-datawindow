@@ -1,6 +1,6 @@
 {
   "name": "ngx-datawindow",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Angular DataWindow component inspired by PowerBuilder DataWindow",
   "peerDependencies": {
     "@angular/cdk": ">=17.0.0",
