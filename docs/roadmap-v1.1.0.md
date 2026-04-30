@@ -90,10 +90,58 @@
 **目标：覆盖更多真实使用场景，吸引用户**
 
 ### 实时数据场景（重点）
-- [ ] WebSocket 实时推送（股票行情、日志流）
+- [ ] **币安 WebSocket 实时行情**（加密货币价格，高频推送验证）
+- [ ] **OKX WebSocket 实时行情**（多币种对比）
+- [ ] 股票行情（A股/港股/美股，秒级更新）
 - [ ] SSE 事件流（通知、消息）
 - [ ] 增量更新（只更新变化行，不全量刷新）
-- [ ] 新数据闪烁提示（高亮 2s 后恢复）
+- [ ] 新数据闪烁提示（高亮 500ms 后恢复）
+
+#### 币安 WebSocket 接入示例
+```typescript
+// 币安 WebSocket API
+const ws = new WebSocket('wss://stream.binance.com:9443/ws/btcusdt@ticker');
+
+// 数据格式
+interface BinanceTicker {
+  s: string;   // 交易对 SYMBOL
+  c: string;   // 最新价格
+  p: string;   // 价格变化
+  P: string;   // 价格变化百分比
+  v: string;   // 交易量
+  q: string;   // 成交额
+}
+
+// 接入 ngx-datawindow
+<data-table
+  [dataFeed]="{
+    source: binanceTicker$,
+    mode: 'merge',
+    keyField: 'symbol',
+    highlightDuration: 500
+  }"
+/>
+```
+
+#### OKX WebSocket 接入示例
+```typescript
+// OKX WebSocket API
+const ws = new WebSocket('wss://ws.okx.com:8443/ws/v5/public');
+ws.send(JSON.stringify({
+  op: 'subscribe',
+  args: [{ channel: 'tickers', instId: 'BTC-USDT' }]
+}));
+
+// 数据格式
+interface OKXTicker {
+  instId: string;    // 产品ID
+  last: string;      // 最新成交价
+  open24h: string;   // 24小时开盘价
+  high24h: string;   // 24小时最高价
+  low24h: string;    // 24小时最低价
+  vol24h: string;    // 24小时交易量
+}
+```
 
 ### 企业管理场景
 - [ ] 订单管理系统（订单列表、状态流转、批量操作）
