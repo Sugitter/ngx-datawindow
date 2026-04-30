@@ -433,3 +433,186 @@ a mat-icon {
     border: 1px solid #ccc !important;
   }
 }
+
+/* ==================== Realtime Demo 行情样式 ==================== */
+
+/* 股票代码/名称 */
+.rt-symbol {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.2;
+}
+.rt-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.rt-sym-wrap {
+  display: flex;
+  flex-direction: column;
+}
+.rt-sym {
+  font-weight: 600;
+  font-size: 13px;
+  color: #212121;
+}
+.rt-name {
+  font-size: 11px;
+  color: #888;
+  margin-top: 1px;
+}
+
+/* 成交量 */
+.rt-vol {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.rt-vol-text {
+  font-size: 12px;
+  color: #666;
+  font-variant-numeric: tabular-nums;
+  min-width: 36px;
+  text-align: right;
+}
+
+/* 高/低 */
+.rt-hl {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+.rt-hl-sep {
+  color: #ccc;
+  margin: 0 3px;
+}
+
+/* 实时行情表格行高更紧凑 */
+.realtime-demo .dt-table-wrapper {
+  max-height: 520px;
+}
+.realtime-demo .mat-mdc-row {
+  height: 40px !important;
+}
+.realtime-demo .mat-mdc-cell {
+  height: 40px !important;
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+}
+
+/* 价格闪烁动画 */
+@keyframes price-flash-green {
+  0% { background: rgba(76,175,80,0.25); }
+  100% { background: transparent; }
+}
+@keyframes price-flash-red {
+  0% { background: rgba(244,67,54,0.25); }
+  100% { background: transparent; }
+}
+
+/* ==================== 统一页面布局 ==================== */
+.page-container {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ==================== ngx-datawindow 统一行高 ==================== */
+ngx-datawindow {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+ngx-datawindow .mat-mdc-header-row,
+ngx-datawindow .mat-mdc-row {
+  height: var(--dt-row-height, 36px) !important;
+  min-height: var(--dt-row-height, 36px) !important;
+}
+
+ngx-datawindow .mat-mdc-header-cell,
+ngx-datawindow .mat-mdc-cell {
+  height: var(--dt-row-height, 36px) !important;
+  padding: 0 8px !important;
+}
+
+ngx-datawindow .mat-mdc-paginator {
+  min-height: var(--dt-row-height, 36px) !important;
+  height: var(--dt-row-height, 36px) !important;
+}
+
+ngx-datawindow .mat-mdc-paginator-container {
+  min-height: var(--dt-row-height, 36px) !important;
+  height: var(--dt-row-height, 36px) !important;
+}
+
+ngx-datawindow .dt-container {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+ngx-datawindow .dt-table-wrapper {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+ngx-datawindow .dt-table-wrapper.dt-fixed-height {
+  max-height: none !important;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.page-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-header h3 mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  color: #666;
+}
+
+/* 操作栏 */
+.actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+
+/* 自适应高度：ngx-datawindow 组件占满容器 */
+ngx-datawindow {
+  display: block;
+}

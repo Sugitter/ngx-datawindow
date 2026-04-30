@@ -21,55 +21,59 @@ import { RouterModule, RouterOutlet } from '@angular/router';
     ],
     template: `
         <div class="demo-layout">
-            <!-- 左侧导航栏 -->
+            <!-- Sidebar Navigation -->
             <nav class="sidebar">
                 <div class="sidebar-header">
                     <h2>ngx-datawindow</h2>
-                    <p>功能演示</p>
+                    <p>Demo</p>
                 </div>
                 <mat-divider></mat-divider>
                 <mat-nav-list>
                     <a mat-list-item routerLink="/demo/basic" routerLinkActive="active">
                         <mat-icon matListItemIcon>table_chart</mat-icon>
-                        <span matListItemTitle>基础 CRUD</span>
+                        <span matListItemTitle>Basic CRUD</span>
                     </a>
                     <a mat-list-item routerLink="/demo/columns" routerLinkActive="active">
                         <mat-icon matListItemIcon>view_column</mat-icon>
-                        <span matListItemTitle>列特性</span>
+                        <span matListItemTitle>Column Features</span>
                     </a>
                     <a mat-list-item routerLink="/demo/filter" routerLinkActive="active">
                         <mat-icon matListItemIcon>filter_list</mat-icon>
-                        <span matListItemTitle>筛选排序</span>
+                        <span matListItemTitle>Filter & Sort</span>
                     </a>
                     <a mat-list-item routerLink="/demo/editing" routerLinkActive="active">
                         <mat-icon matListItemIcon>edit</mat-icon>
-                        <span matListItemTitle>行内编辑</span>
+                        <span matListItemTitle>Inline Editing</span>
                     </a>
                     <a mat-list-item routerLink="/demo/aggregation" routerLinkActive="active">
                         <mat-icon matListItemIcon>calculate</mat-icon>
-                        <span matListItemTitle>聚合计算</span>
+                        <span matListItemTitle>Aggregation</span>
                     </a>
                     <a mat-list-item routerLink="/demo/selection" routerLinkActive="active">
                         <mat-icon matListItemIcon>check_box</mat-icon>
-                        <span matListItemTitle>行选择</span>
+                        <span matListItemTitle>Row Selection</span>
                     </a>
                     <a mat-list-item routerLink="/demo/virtual" routerLinkActive="active">
                         <mat-icon matListItemIcon>speed</mat-icon>
-                        <span matListItemTitle>虚拟滚动</span>
+                        <span matListItemTitle>Virtual Scroll</span>
+                    </a>
+                    <a mat-list-item routerLink="/demo/realtime" routerLinkActive="active">
+                        <mat-icon matListItemIcon>sync</mat-icon>
+                        <span matListItemTitle>Realtime Data</span>
                     </a>
                     <a mat-list-item routerLink="/demo/toolbar" routerLinkActive="active">
                         <mat-icon matListItemIcon>build</mat-icon>
-                        <span matListItemTitle>工具栏</span>
+                        <span matListItemTitle>Toolbar</span>
                     </a>
                     <mat-divider></mat-divider>
                     <a mat-list-item routerLink="/demo/business" routerLinkActive="active" class="business-link">
                         <mat-icon matListItemIcon>business_center</mat-icon>
-                        <span matListItemTitle>🎯 综合业务演示</span>
+                        <span matListItemTitle>🎯 Business Demo</span>
                     </a>
                 </mat-nav-list>
             </nav>
 
-            <!-- 右侧内容区 -->
+            <!-- Content Area -->
             <main class="content-area">
                 <router-outlet></router-outlet>
             </main>
@@ -84,7 +88,7 @@ import { RouterModule, RouterOutlet } from '@angular/router';
             background: #f5f7fa;
         }
 
-        /* 左侧导航栏 */
+        /* Sidebar Navigation */
         .sidebar {
             width: 260px;
             min-width: 260px;
@@ -165,16 +169,15 @@ import { RouterModule, RouterOutlet } from '@angular/router';
             margin: 4px 0;
         }
 
-        /* 右侧内容区 */
+        /* Content Area */
         .content-area {
             flex: 1;
             min-width: 0;
             padding: 16px;
-            overflow-y: auto;
-            overflow-x: hidden;
+            overflow: hidden;
             background: #f5f7fa;
-            height: 100vh;
-            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
         }
     `],
     standalone: true,

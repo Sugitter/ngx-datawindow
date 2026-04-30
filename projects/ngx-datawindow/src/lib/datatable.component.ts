@@ -8,6 +8,8 @@ import {
   signal, computed, OnInit, OnDestroy, OnChanges, ChangeDetectorRef,
   ContentChild, TemplateRef
 } from '@angular/core';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { Observable, Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
@@ -28,7 +30,7 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
 import { DataTableService } from './datatable.service';
 import {
   ColumnConfig, TableConfig, TableState, ToolbarAction, RowAction,
-  ChangeEvent, ExportConfig
+  ChangeEvent, ExportConfig, DataFeedConfig, HighlightCell
 } from './models';
 import { DataRow, RowId, RawValue, DataStoreConfig } from './datastore';
 
@@ -164,7 +166,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
       }
 
       <!-- 表格主体 -->
-      <div class="dt-table-wrapper" [class.dt-virtual-mode]="virtualScrollEnabled()">
+      <div class="dt-table-wrapper" [class.dt-virtual-mode]="virtualScrollEnabled()" [class.dt-fixed-height]="!autoHeight()">
         @if (virtualScrollEnabled()) {
           <!-- 虚拟滚动模式 -->
           <cdk-virtual-scroll-viewport
@@ -206,8 +208,13 @@ export interface ToolbarEvent { action: ToolbarAction; }
                     }
                   </th>
                   <td mat-cell *matCellDef="let row"
-                    [style.textAlign]="col.align || 'left'">
-                    @if (col.editable) {
+                    [style.textAlign]="col.align || 'left'"
+                    [ngStyle]="col.cellStyle ? col.cellStyle(row[col.field], row) : null"
+                    [ngClass]="col.cellClass ? col.cellClass(row[col.field], row) : ''"
+                    [class.dt-cell-highlight]="isCellHighlighted(row._id, col.field)">
+                    @if (col.cellRenderer) {
+                      <span [innerHTML]="sanitizeHtml(col.cellRenderer(row[col.field], row))"></span>
+                    } @else if (col.editable) {
                       <ng-container *ngTemplateOutlet="editCell; context: { $implicit: row, col: col }">
                       </ng-container>
                     } @else {
@@ -300,8 +307,13 @@ export interface ToolbarEvent { action: ToolbarAction; }
                 </div>
               </th>
               <td mat-cell *matCellDef="let row"
-                [style.textAlign]="col.align || 'left'">
-                @if (col.editable) {
+                [style.textAlign]="col.align || 'left'"
+                [ngStyle]="col.cellStyle ? col.cellStyle(row[col.field], row) : null"
+                [ngClass]="col.cellClass ? col.cellClass(row[col.field], row) : ''"
+                [class.dt-cell-highlight]="isCellHighlighted(row._id, col.field)">
+                @if (col.cellRenderer) {
+                  <span [innerHTML]="sanitizeHtml(col.cellRenderer(row[col.field], row))"></span>
+                } @else if (col.editable) {
                   <ng-container *ngTemplateOutlet="editCell; context: { $implicit: row, col: col }">
                   </ng-container>
                 } @else {
@@ -503,8 +515,11 @@ export interface ToolbarEvent { action: ToolbarAction; }
     .dt-table-wrapper {
       flex: 1;
       overflow: auto;
-      max-height: 380px;
       position: relative;
+    }
+
+    .dt-table-wrapper.dt-fixed-height {
+      max-height: var(--dt-max-height, 480px);
     }
 
     .dt-table {
@@ -654,6 +669,15 @@ export interface ToolbarEvent { action: ToolbarAction; }
       background: #f0f0f0;
     }
 
+    /* 实时数据更新高亮 */
+    .dt-cell-highlight {
+      animation: dt-cell-flash 0.4s ease-out;
+    }
+    @keyframes dt-cell-flash {
+      0% { background: #fff8e1; }
+      100% { background: transparent; }
+    }
+
     .dt-edit-input {
       width: 100%;
       border: 1px solid var(--dt-primary);
@@ -741,23 +765,35 @@ export interface ToolbarEvent { action: ToolbarAction; }
       height: 18px !important;
     }
     
-    /* Material 表格行覆盖 */
+    /* Material 表格行覆盖 - 强制统一高度 */
+    ::ng-deep .dt-container .mat-mdc-header-row {
+      height: var(--dt-row-height) !important;
+      min-height: var(--dt-row-height) !important;
+    }
     ::ng-deep .dt-container .mat-mdc-row {
       height: var(--dt-row-height) !important;
+      min-height: var(--dt-row-height) !important;
     }
     ::ng-deep .dt-container .mat-mdc-cell {
       height: var(--dt-row-height) !important;
+      padding: 0 8px !important;
+    }
+    ::ng-deep .dt-container .mat-mdc-header-cell {
+      height: var(--dt-row-height) !important;
+      padding: 0 8px !important;
     }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DataTableComponent implements OnInit, OnChanges {
-  constructor(private _service: DataTableService) {}
+export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
+  constructor(private _service: DataTableService, private _cdr: ChangeDetectorRef, private _sanitizer: DomSanitizer) {}
 
   // ── 输入 ──────────────────────────────────────────────────────────────────
 
   private _pendingData: Record<string, RawValue>[] | null = null;
   private _initialized = false;
+  private _dataFeedSub: Subscription | null = null;
+  private _highlightCells = signal<Map<string, HighlightCell>>(new Map());
 
   @Input() set datastoreConfig(v: DataStoreConfig) {
     this._datastoreConfig = v;
@@ -787,6 +823,29 @@ export class DataTableComponent implements OnInit, OnChanges {
     this._tryInitialize();
   }
   @Input() set isLoading(v: boolean) { this._loadingInput.set(v ?? false); }
+
+  /** 实时数据源（Observable） */
+  @Input() set data$(source: Observable<unknown> | undefined) {
+    this._cleanupDataFeed();
+    if (source && this._initialized) {
+      this._subscribeDataFeed(source as Observable<Record<string, RawValue>>, 'replace');
+    } else if (source) {
+      this._pendingDataSource = source as Observable<Record<string, RawValue>>;
+    }
+  }
+
+  /** 实时数据配置（支持 merge/append 模式） */
+  @Input() set dataFeed(config: DataFeedConfig<unknown> | undefined) {
+    this._cleanupDataFeed();
+    if (config?.source && this._initialized) {
+      this._subscribeDataFeedAdvanced(config as DataFeedConfig);
+    } else if (config?.source) {
+      this._pendingDataFeed = config as DataFeedConfig;
+    }
+  }
+
+  private _pendingDataSource: Observable<Record<string, RawValue>> | null = null;
+  private _pendingDataFeed: DataFeedConfig | null = null;
 
   private _tryInitialize(): void {
     // 需要所有必要配置都就绪
@@ -823,6 +882,16 @@ export class DataTableComponent implements OnInit, OnChanges {
       ds.on('rowRemoved', () => this._syncAllRows());
       ds.on('bufferChanged', () => this._syncAllRows());
     }
+
+    // 订阅待处理的实时数据源
+    if (this._pendingDataSource) {
+      this._subscribeDataFeed(this._pendingDataSource, 'replace');
+      this._pendingDataSource = null;
+    }
+    if (this._pendingDataFeed) {
+      this._subscribeDataFeedAdvanced(this._pendingDataFeed);
+      this._pendingDataFeed = null;
+    }
   }
 
   // ── 输出 ──────────────────────────────────────────────────────────────────
@@ -849,7 +918,7 @@ export class DataTableComponent implements OnInit, OnChanges {
   private _virtualRowHeight = signal(48);
   private _virtualScrollEnabled = signal(false);
   private _virtualScrollIndex = signal(0);
-  private _allRows: DataRow[] = [];
+  private _allRows = signal<DataRow[]>([]);
 
   // ── 响应式 ────────────────────────────────────────────────────────────────────────
 
@@ -864,6 +933,7 @@ export class DataTableComponent implements OnInit, OnChanges {
   readonly selectionMode = computed(() => this._tableConfig?.selectionMode ?? 'none');
   readonly toolbarActions = computed(() => this._tableConfig?.toolbarActions);
   readonly paginationConfig = computed(() => this._tableConfig?.pagination);
+  readonly autoHeight = computed(() => this._tableConfig?.autoHeight ?? true);
 
   readonly config = computed(() => this._tableConfig);
   readonly visibleColumns = computed(() => this._columns.filter(c => c.visible !== false));
@@ -888,7 +958,7 @@ export class DataTableComponent implements OnInit, OnChanges {
 
   readonly virtualScrollEnabled = computed(() => {
     const vs = this._tableConfig?.virtualScroll;
-    return vs?.enabled === true && this._totalRowCount() > 0;
+    return vs?.enabled === true;
   });
 
   readonly virtualRowHeight = computed(() => {
@@ -896,7 +966,7 @@ export class DataTableComponent implements OnInit, OnChanges {
   });
 
   readonly virtualData = computed(() => {
-    return this._allRows.map(r => ({ ...r.raw, _id: r.id, _status: r.status }));
+    return this._allRows().map(r => ({ ...r.raw, _id: r.id, _status: r.status }));
   });
 
   private _totalRowCount = computed(() => {
@@ -924,10 +994,174 @@ export class DataTableComponent implements OnInit, OnChanges {
     }
   }
 
+  ngOnDestroy(): void {
+    this._cleanupDataFeed();
+  }
+
   private _syncAllRows(): void {
     const ds = this._service!.getDataStore();
     if (ds) {
-      this._allRows = [...ds.getRows()];
+      this._allRows.set([...ds.getRows()]);
+    }
+  }
+
+  // ── 实时数据订阅 ─────────────────────────────────────────────────────────
+
+  private _subscribeDataFeed(source: Observable<Record<string, RawValue>>, mode: 'replace' | 'merge' | 'append'): void {
+    this._dataFeedSub = source.subscribe({
+      next: (data) => {
+        this._handleDataUpdate(data, mode);
+      },
+      error: (err) => console.error('Data feed error:', err),
+    });
+  }
+
+  private _subscribeDataFeedAdvanced(config: DataFeedConfig): void {
+    const { source, mode, highlightDuration = 500, transform } = config;
+
+    this._dataFeedSub = source.subscribe({
+      next: (rawData) => {
+        let data: Record<string, RawValue>[] | null = null;
+
+        // 数据转换
+        if (transform) {
+          data = transform(rawData);
+          if (!data) return; // transform 返回 null 时跳过
+        } else if (Array.isArray(rawData)) {
+          data = rawData;
+        } else if (typeof rawData === 'object' && rawData !== null) {
+          data = [rawData as Record<string, RawValue>];
+        } else {
+          return; // 无效数据，跳过
+        }
+
+        if (!data.length) return;
+
+        // 根据 mode 处理数据
+        const updatedIds = this._handleDataUpdateAdvanced(data, config);
+
+        // 添加高亮效果（仅在 highlightDuration > 0 时）
+        if (highlightDuration > 0 && updatedIds.length > 0 && config.keyField) {
+          this._highlightUpdatedCells(updatedIds, data, config.keyField, highlightDuration);
+        }
+      },
+      error: (err) => console.error('Data feed error:', err),
+    });
+  }
+
+  private _handleDataUpdate(data: Record<string, RawValue>, mode: 'replace' | 'merge' | 'append'): void {
+    if (mode === 'replace') {
+      this._service!.setData(Array.isArray(data) ? data : [data]);
+    } else if (mode === 'append') {
+      // 追加新数据
+      const current = this._service!.getDataStore().getRows();
+      const newData = Array.isArray(data) ? data : [data];
+      this._service!.setData([...current.map(r => r.raw), ...newData]);
+    }
+    if (this._virtualScrollEnabled()) {
+      this._syncAllRows();
+    }
+    this._cdr.markForCheck();
+  }
+
+  private _handleDataUpdateAdvanced(data: Record<string, RawValue>[], config: DataFeedConfig): number[] {
+    const { mode, keyField } = config;
+
+    if (mode === 'replace') {
+      this._service!.setData(data);
+      return [];
+    }
+
+    if (!keyField) {
+      console.warn('DataFeedConfig.keyField is required for merge/append mode');
+      return [];
+    }
+
+    const ds = this._service!.getDataStore();
+    const existingRows = ds.getRows();
+    const keyMap = new Map<RawValue, number>();
+    existingRows.forEach(r => keyMap.set(r.raw[keyField], r.id));
+
+    const updatedIds: number[] = [];
+
+    if (mode === 'merge') {
+      for (const item of data) {
+        const keyValue = item[keyField];
+        const existingId = keyMap.get(keyValue);
+
+        if (existingId !== undefined) {
+          // 更新现有行
+          this._service!.updateRow(existingId, item);
+          updatedIds.push(existingId);
+        } else {
+          // 新增行
+          const newRow = this._service!.addRow(item);
+          updatedIds.push(newRow.id);
+        }
+      }
+    } else if (mode === 'append') {
+      // 只追加新数据
+      for (const item of data) {
+        const keyValue = item[keyField];
+        if (!keyMap.has(keyValue)) {
+          this._service!.addRow(item);
+        }
+      }
+    }
+
+    if (this._virtualScrollEnabled()) {
+      this._syncAllRows();
+    }
+
+    // OnPush 模式下手动触发变更检测
+    this._cdr.markForCheck();
+
+    return updatedIds;
+  }
+
+  private _highlightUpdatedCells(rowIds: number[], data: Record<string, RawValue>[], keyField: string, duration: number): void {
+    const highlights = this._highlightCells();
+    const now = Date.now();
+
+    for (const rowId of rowIds) {
+      const row = this._service!.getDataStore().getRowById(rowId);
+      if (!row) continue;
+
+      for (const col of this._columns) {
+        const field = col.field;
+        const newValue = row.raw[field];
+        highlights.set(`${rowId}:${field}`, {
+          rowId,
+          field,
+          timestamp: now,
+          value: newValue,
+        });
+      }
+    }
+
+    this._highlightCells.set(new Map(highlights));
+
+    // 定时清除高亮
+    setTimeout(() => {
+      const current = this._highlightCells();
+      for (const key of current.keys()) {
+        const h = current.get(key);
+        if (h && now - h.timestamp >= duration) {
+          current.delete(key);
+        }
+      }
+      this._highlightCells.set(new Map(current));
+    }, duration);
+  }
+
+  isCellHighlighted(rowId: number, field: string): boolean {
+    return this._highlightCells().has(`${rowId}:${field}`);
+  }
+
+  private _cleanupDataFeed(): void {
+    if (this._dataFeedSub) {
+      this._dataFeedSub.unsubscribe();
+      this._dataFeedSub = null;
     }
   }
 
@@ -1117,6 +1351,10 @@ export class DataTableComponent implements OnInit, OnChanges {
     if (col.format) return col.format(val, row);
     if (val === null || val === undefined) return '';
     return String(val);
+  }
+
+  sanitizeHtml(html: string): SafeHtml {
+    return this._sanitizer.bypassSecurityTrustHtml(html);
   }
 
   // ── 导出 ──────────────────────────────────────────────────────────────────

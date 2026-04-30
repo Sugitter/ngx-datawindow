@@ -12,7 +12,7 @@ export type {
 } from './lib/datatable.component';
 export type {
   ColumnConfig, TableConfig, TableState, ToolbarAction, RowAction,
-  ChangeEvent, ExportConfig
+  ChangeEvent, ExportConfig, DataFeedConfig, HighlightCell, DataUpdateEvent
 } from './lib/models';
 
 // 服务

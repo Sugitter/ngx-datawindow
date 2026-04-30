@@ -13,6 +13,7 @@ export const routes: Routes = [
             { path: 'aggregation', loadComponent: () => import('./pages/demo/aggregation/aggregation.component').then(m => m.AggregationComponent) },
             { path: 'selection', loadComponent: () => import('./pages/demo/selection/selection.component').then(m => m.SelectionComponent) },
             { path: 'virtual', loadComponent: () => import('./pages/demo/virtual/virtual.component').then(m => m.VirtualComponent) },
+            { path: 'realtime', loadComponent: () => import('./pages/demo/realtime/realtime.component').then(m => m.RealtimeDemoComponent) },
             { path: 'toolbar', loadComponent: () => import('./pages/demo/toolbar/toolbar.component').then(m => m.ToolbarComponent) },
             { path: 'business', loadComponent: () => import('./pages/demo/business/business.component').then(m => m.BusinessComponent) },
         ]

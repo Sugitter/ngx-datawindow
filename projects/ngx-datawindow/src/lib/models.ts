@@ -1,3 +1,6 @@
+import { Observable } from 'rxjs';
+import { RawValue } from './datastore';
+
 /**
  * 列配置模型
  * 用于配置表格列的显示和行为
@@ -71,6 +74,15 @@ export interface ColumnConfig<T = unknown> {
   
   /** 元数据 */
   metadata?: Record<string, unknown>;
+
+  /** 自定义单元格 HTML 渲染器，返回 HTML 字符串（会通过 innerHTML 渲染） */
+  cellRenderer?: (value: any, row: any) => string;
+
+  /** 自定义单元格样式，返回 CSS 样式对象 */
+  cellStyle?: (value: any, row: any) => Record<string, string>;
+
+  /** 自定义单元格 CSS 类 */
+  cellClass?: (value: any, row: any) => string;
 }
 
 /** 表格配置 */
@@ -168,6 +180,12 @@ export interface TableConfig {
     /** 响应式断点 */
     breakpoints?: { [key: string]: { visibleColumns: string[]; priority: number[] } };
   };
+
+  /** 自适应高度（不限制最大高度，表格按内容撑开） */
+  autoHeight?: boolean;
+
+  /** 固定最大高度（仅 autoHeight=false 时生效，默认 480px） */
+  maxHeight?: string;
 }
 
 /** 编辑状态 */
@@ -238,4 +256,51 @@ export interface ExportConfig {
   includeHeaders?: boolean;
   includeFilters?: boolean;
   exportSelectedOnly?: boolean;
+}
+
+/**
+ * 实时数据接入配置
+ * 支持 WebSocket/SSE/Observable 数据源
+ */
+export interface DataFeedConfig<T = unknown> {
+  /** 数据源 Observable */
+  source: Observable<T>;
+
+  /** 更新模式 */
+  mode: 'replace' | 'merge' | 'append';
+
+  /** 唯一标识字段（merge/append 模式必需） */
+  keyField?: string;
+
+  /** 高亮时长(ms)，默认 500 */
+  highlightDuration?: number;
+
+  /** 批量合并间隔(ms)，默认 100，高频推送时合并 */
+  batchInterval?: number;
+
+  /** 是否自动滚动到底部（append 模式） */
+  autoScroll?: boolean;
+
+  /** 数据转换函数（可选） */
+  transform?: (data: T) => Record<string, RawValue>[] | null;
+}
+
+/** 实时数据更新事件 */
+export interface DataUpdateEvent {
+  /** 更新模式 */
+  mode: 'replace' | 'merge' | 'append';
+  /** 新增行数组 */
+  rows: Record<string, RawValue>[];
+  /** 更新的行 IDs（merge 模式） */
+  updatedIds?: number[];
+  /** 是否首次加载 */
+  initial?: boolean;
+}
+
+/** 高亮单元格状态 */
+export interface HighlightCell {
+  rowId: number;
+  field: string;
+  timestamp: number;
+  value: RawValue;
 }

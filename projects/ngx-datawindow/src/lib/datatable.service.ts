@@ -3,14 +3,16 @@
  * 封装 DataStore 引擎，提供响应式表格数据管理
  */
 
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, OnDestroy } from '@angular/core';
+import { Subscription, timer, Subject } from 'rxjs';
+import { buffer, filter } from 'rxjs/operators';
 import {
   DataStoreImpl, DataStoreConfig, DataStoreEvent, DataStoreEventType,
   FieldDefinition, FilterCondition, SortRule, AggregationFormula,
   AggregationResult, ValidationResult, UpdateData, QueryOptions,
   DataRow, RowId, RawValue, BufferType
 } from './datastore';
-import { ColumnConfig, TableState, ToolbarAction, RowAction, ChangeEvent, ExportConfig } from './models';
+import { ColumnConfig, TableState, ToolbarAction, RowAction, ChangeEvent, ExportConfig, DataFeedConfig, HighlightCell } from './models';
 
 export interface DataTableOptions {
   /** DataStore 配置 */
@@ -223,19 +225,28 @@ export class DataTableService {
   // ── 增删改 ────────────────────────────────────────────────────────────────
 
   addRow(data: Record<string, RawValue>, buffer: BufferType = 'main'): DataRow {
-    return this._ds.addRow(data, buffer);
+    const row = this._ds.addRow(data, buffer);
+    this._notifyDataChange();
+    return row;
   }
 
   addRows(data: Record<string, RawValue>[]): DataRow[] {
-    return this._ds.addRows(data);
+    const rows = this._ds.addRows(data);
+    this._notifyDataChange();
+    return rows;
   }
 
   updateRow(rowId: RowId, data: Partial<Record<string, RawValue>>): Promise<boolean> {
-    return this._ds.updateRow(rowId, data).then(r => r.success);
+    return this._ds.updateRow(rowId, data).then(r => {
+      if (r.success) this._notifyDataChange();
+      return r.success;
+    });
   }
 
   deleteRow(rowId: RowId): boolean {
-    return this._ds.deleteRow(rowId);
+    const ok = this._ds.deleteRow(rowId);
+    if (ok) this._notifyDataChange();
+    return ok;
   }
 
   deleteSelected(): number {
@@ -249,11 +260,15 @@ export class DataTableService {
   }
 
   restoreRow(rowId: RowId): boolean {
-    return this._ds.restoreRow(rowId);
+    const ok = this._ds.restoreRow(rowId);
+    if (ok) this._notifyDataChange();
+    return ok;
   }
 
   permanentDelete(rowId: RowId): boolean {
-    return this._ds.permanentDelete(rowId);
+    const ok = this._ds.permanentDelete(rowId);
+    if (ok) this._notifyDataChange();
+    return ok;
   }
 
   // ── 选择 ──────────────────────────────────────────────────────────────────
@@ -362,6 +377,126 @@ export class DataTableService {
     if (!this._ds) { return; }
     this._ds.setData(data);
     this._state.update(s => ({ ...s, pageIndex: 0, selectedRows: new Set() }));
+  }
+
+  /** 触发状态更新以通知 computed signal 重新计算 */
+  private _notifyDataChange(): void {
+    this._state.update(s => ({ ...s }));
+  }
+
+  // ── 实时数据接入 ─────────────────────────────────────────────────────────
+
+  /**
+   * 处理实时数据更新
+   * @param mode replace（全量替换）| merge（按 keyField 合并）| append（追加）
+   * @param items 变更的数据行
+   * @param keyField merge 模式的主键字段，默认 id
+   * @param highlightDuration 高亮持续时间(ms)
+   */
+  feedUpdate(
+    mode: 'replace' | 'merge' | 'append',
+    items: Record<string, RawValue>[],
+    keyField = 'id',
+    highlightDuration = 500
+  ): void {
+    if (!this._ds || !items.length) return;
+
+    if (mode === 'replace') {
+      this._ds.setData(items);
+
+    } else if (mode === 'merge') {
+      for (const item of items) {
+        const key = item[keyField] as string | number;
+        const existing = this._ds.getRowById(key as number);
+        if (existing) {
+          // 记录变更字段并高亮
+          for (const [field, value] of Object.entries(item)) {
+            if (field === keyField) continue;
+            if (existing.raw[field] !== value) {
+              this.setHighlight(key as number, field, value, highlightDuration);
+            }
+          }
+          this._ds.updateRow(key as number, item);
+        } else {
+          this._ds.addRow(item);
+        }
+      }
+
+    } else {
+      // append — 追加新行
+      const newRows = this._ds.addRows(items);
+      // 新行全部高亮
+      for (const row of newRows) {
+        for (const col of this._columns) {
+          if (col.field !== keyField) {
+            this.setHighlight(row.id, col.field, row.raw[col.field], highlightDuration);
+          }
+        }
+      }
+    }
+  }
+
+  /** 批量合并缓冲区（用于高频数据） */
+  private _feedBatch: Record<string, RawValue>[] = [];
+  private _feedBatchTimer: ReturnType<typeof setTimeout> | null = null;
+  private _feedBatchFn: (() => void) | null = null;
+
+  /**
+   * 启动批量合并模式
+   * @param interval 合并间隔(ms)
+   * @param mode replace | merge | append
+   * @param keyField merge 模式的主键
+   */
+  startFeedBatch(interval = 100, mode: 'replace' | 'merge' | 'append' = 'merge', keyField = 'id'): void {
+    this._feedBatchFn = () => {
+      if (!this._feedBatch.length) return;
+      const items = this._feedBatch.splice(0, this._feedBatch.length);
+      this.feedUpdate(mode, items, keyField);
+    };
+  }
+
+  /** 添加到批量缓冲区（需先调用 startFeedBatch） */
+  addToFeedBatch(item: Record<string, RawValue>): void {
+    this._feedBatch.push(item);
+    if (!this._feedBatchTimer) {
+      this._feedBatchTimer = setTimeout(() => {
+        this._feedBatchFn?.();
+        this._feedBatchTimer = null;
+      }, 100);
+    }
+  }
+
+  /** 刷新显示（用于追加模式滚动到底部） */
+  refreshFeed(): void {
+    this._refresh();
+  }
+
+  // ── 高亮状态 ─────────────────────────────────────────────────────────────
+
+  /** 标记单元格高亮 */
+  private _highlightCells = signal<Map<string, HighlightCell>>(new Map());
+
+  /** 高亮单元格（rowId_field 格式 key） */
+  setHighlight(rowId: number, field: string, value: RawValue, duration = 500): void {
+    const key = `${rowId}_${field}`;
+    const ts = Date.now();
+    this._highlightCells.update(m => {
+      const next = new Map(m);
+      next.set(key, { rowId, field, timestamp: ts, value });
+      return next;
+    });
+    setTimeout(() => {
+      this._highlightCells.update(m => {
+        const next = new Map(m);
+        next.delete(key);
+        return next;
+      });
+    }, duration);
+  }
+
+  /** 检查单元格是否高亮中 */
+  isHighlighted(rowId: number, field: string): boolean {
+    return this._highlightCells().has(`${rowId}_${field}`);
   }
 
   reset(): void {

@@ -2,7 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatCardModule } from '@angular/material/card';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import {
     DataTableComponent,
@@ -19,68 +18,56 @@ import {
         CommonModule,
         MatButtonModule,
         MatIconModule,
-        MatCardModule,
         MatSnackBarModule,
-        DataTableComponent,
+        DataTableComponent
     ],
     template: `
         <div class="page-container">
-            <mat-card class="demo-card">
-                <mat-card-header>
-                    <mat-card-title>
-                        <mat-icon>view_column</mat-icon>
-                        列特性演示
-                    </mat-card-title>
-                    <mat-card-subtitle>
-                        展示列的各种特性：排序、筛选、可编辑、格式化、固定列、虚拟列等
-                    </mat-card-subtitle>
-                </mat-card-header>
+            <div class="page-header">
+                <h3>
+                    <mat-icon>view_column</mat-icon>
+                    Column Features Demo
+                </h3>
+            </div>
 
-                <mat-card-content>
-                    <div class="features-grid">
-                        <div class="feature-item">
-                            <h4><mat-icon>sort</mat-icon> 排序</h4>
-                            <p>点击列头进行排序，支持多列排序</p>
-                        </div>
-                        <div class="feature-item">
-                            <h4><mat-icon>filter_list</mat-icon> 筛选</h4>
-                            <p>每列支持不同类型的筛选器</p>
-                        </div>
-                        <div class="feature-item">
-                            <h4><mat-icon>edit</mat-icon> 编辑</h4>
-                            <p>支持文本框、下拉框、日期等多种编辑类型</p>
-                        </div>
-                        <div class="feature-item">
-                            <h4><mat-icon>text_format</mat-icon> 格式化</h4>
-                            <p>自定义显示格式，如货币、日期等</p>
-                        </div>
-                        <div class="feature-item">
-                            <h4><mat-icon>vertical_align_center</mat-icon> 固定列</h4>
-                            <p>左右两侧可以固定重要列</p>
-                        </div>
-                        <div class="feature-item">
-                            <h4><mat-icon>visibility</mat-icon> 虚拟列</h4>
-                            <p>显示行号、序号等虚拟计算的列</p>
-                        </div>
-                    </div>
+            <div class="features-grid">
+                <div class="feature-item">
+                    <h4><mat-icon>sort</mat-icon> Sort</h4>
+                    <p>Click column header to sort, supports multi-column</p>
+                </div>
+                <div class="feature-item">
+                    <h4><mat-icon>filter_list</mat-icon> Filter</h4>
+                    <p>Each column supports different filter types</p>
+                </div>
+                <div class="feature-item">
+                    <h4><mat-icon>edit</mat-icon> Edit</h4>
+                    <p>Supports text, dropdown, date and more edit types</p>
+                </div>
+                <div class="feature-item">
+                    <h4><mat-icon>text_format</mat-icon> Format</h4>
+                    <p>Custom display format like currency, date</p>
+                </div>
+                <div class="feature-item">
+                    <h4><mat-icon>vertical_align_center</mat-icon> Fixed Column</h4>
+                    <p>Pin important columns on left or right</p>
+                </div>
+                <div class="feature-item">
+                    <h4><mat-icon>visibility</mat-icon> Virtual Column</h4>
+                    <p>Display row number, sequence and computed columns</p>
+                </div>
+            </div>
 
-                    <ngx-datawindow
-                        [datastoreConfig]="dataStoreConfig"
-                        [columns]="columns"
-                        [data]="data"
-                        [tableConfig]="tableConfig"
-                    />
-                </mat-card-content>
-            </mat-card>
+            <ngx-datawindow
+                [datastoreConfig]="dataStoreConfig"
+                [columns]="columns"
+                [data]="data"
+                [tableConfig]="tableConfig"
+            />
         </div>
     `,
     styles: [`
         .page-container { max-width: 100%; margin: 0; padding: 0; }
-        .demo-card { border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; }
-        mat-card-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; margin: -16px -16px 12px -16px; padding: 12px 16px; }
-        mat-card-title { display: flex; align-items: center; gap: 8px; font-size: 16px !important; margin-bottom: 4px; }
-        mat-card-title mat-icon { color: white; }
-        mat-card-subtitle { color: rgba(255,255,255,0.85) !important; margin-top: 4px !important; font-size: 12px !important; }
+
         .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 12px; }
         .feature-item { background: #f8f9fa; padding: 10px; border-radius: 6px; border-left: 3px solid #667eea; }
         .feature-item h4 { margin: 0 0 4px 0; display: flex; align-items: center; gap: 6px; color: #333; font-size: 12px; }
@@ -101,24 +88,25 @@ export class ColumnsComponent implements OnInit {
             { name: 'price', type: 'number' },
             { name: 'stock', type: 'number' },
             { name: 'status', type: 'string' },
-            { name: 'createdAt', type: 'string' },
+            { name: 'createdAt', type: 'string' }
         ] as FieldDefinition[]
     };
 
     columns: ColumnConfig[] = [
         { field: 'id', header: 'ID', width: '80', sortable: true, virtual: true },
-        { field: 'name', header: '产品名称', width: '220', sortable: true, filterable: true, editable: true, editType: 'text' },
-        { field: 'category', header: '分类', width: '150', sortable: true, filterable: true, editable: true, editType: 'select',
-            editOptions: [{ value: '电子产品', label: '电子产品' }, { value: '办公用品', label: '办公用品' }, { value: '家具', label: '家具' }, { value: '服装', label: '服装' }, { value: '食品', label: '食品' }] },
-        { field: 'price', header: '价格', width: '120', sortable: true, format: (v) => `¥${Number(v).toFixed(2)}`, editable: true, editType: 'number' },
-        { field: 'stock', header: '库存', width: '100', sortable: true, editable: true, editType: 'number' },
-        { field: 'status', header: '状态', width: '120', sortable: true, filterable: true, editable: true, editType: 'select',
-            editOptions: [{ value: '在售', label: '在售' }, { value: '下架', label: '下架' }, { value: '预售', label: '预售' }, { value: '缺货', label: '缺货' }] },
-        { field: 'createdAt', header: '创建时间', width: '180', sortable: true, format: (v) => new Date(v as string).toLocaleString('zh-CN') },
+        { field: 'name', header: 'Product Name', width: '220', sortable: true, filterable: true, editable: true, editType: 'text' },
+        { field: 'category', header: 'Category', width: '150', sortable: true, filterable: true, editable: true, editType: 'select',
+            editOptions: [{ value: 'Electronics', label: 'Electronics' }, { value: 'Office Supplies', label: 'Office Supplies' }, { value: 'Furniture', label: 'Furniture' }, { value: 'Clothing', label: 'Clothing' }, { value: 'Food', label: 'Food' }] },
+        { field: 'price', header: 'Price', width: '120', sortable: true, format: (v) => `¥${Number(v).toFixed(2)}`, editable: true, editType: 'number' },
+        { field: 'stock', header: 'Stock', width: '100', sortable: true, editable: true, editType: 'number' },
+        { field: 'status', header: 'Status', width: '120', sortable: true, filterable: true, editable: true, editType: 'select',
+            editOptions: [{ value: 'Active', label: 'Active' }, { value: 'Inactive', label: 'Inactive' }, { value: 'Pre-order', label: 'Pre-order' }, { value: 'Out of Stock', label: 'Out of Stock' }] },
+        { field: 'createdAt', header: 'Created At', width: '180', sortable: true, format: (v) => new Date(v as string).toLocaleString('en-US') }
     ];
 
     tableConfig: TableConfig = {
-        title: '产品管理 - 列特性展示',
+        autoHeight: true,
+        title: 'Product Management - Column Features',
         showToolbar: true,
         showPaginator: true,
         showColumnFilter: true,
@@ -135,12 +123,12 @@ export class ColumnsComponent implements OnInit {
     }
 
     private generateProducts(count: number): Record<string, RawValue>[] {
-        const categories = ['电子产品', '办公用品', '家具', '服装', '食品'];
-        const statuses = ['在售', '下架', '预售', '缺货'];
+        const categories = ['Electronics', 'Office Supplies', 'Furniture', 'Clothing', 'Food'];
+        const statuses = ['Active', 'Inactive', 'Pre-order', 'Out of Stock'];
 
         return Array.from({ length: count }, (_, i) => ({
             id: (i + 1) as RawValue,
-            name: `产品 ${i + 1}` as RawValue,
+            name: `Product ${i + 1}` as RawValue,
             category: categories[i % categories.length] as RawValue,
             price: Math.floor(Math.random() * 20000 + 100) as RawValue,
             stock: Math.floor(Math.random() * 500) as RawValue,

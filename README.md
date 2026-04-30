@@ -10,6 +10,19 @@ Bringing PowerBuilder DataWindow's design philosophy to the modern web era.
 
 ---
 
+## Screenshots
+
+![Basic CRUD](screenshot/BasicCRUD.jpeg)
+*Basic CRUD operations with inline editing*
+
+![Business Demo](screenshot/business.jpeg)
+*E-commerce order management with real-time stats*
+
+![Live Stock Quotes](screenshot/LiveStockQuotes.jpeg)
+*Real-time data feed with sparkline charts*
+
+---
+
 ## Why ngx-datawindow?
 
 In 1991, PowerBuilder introduced **DataWindow** — a component that treated data as a first-class citizen with state, history, and traceability. It proved that "data should be managed seriously." Thirty years later, this philosophy is still ahead of most modern frontend approaches.
