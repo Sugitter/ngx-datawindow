@@ -1,0 +1,26 @@
+{
+  "name": "@ngx-datawindow/angular",
+  "version": "0.1.0",
+  "description": "Angular UI components for ngx-datawindow",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "peerDependencies": {
+    "@angular/core": ">=17.0.0",
+    "@angular/material": ">=17.0.0",
+    "@angular/cdk": ">=17.0.0",
+    "@ngx-datawindow/core": "0.1.0"
+  },
+  "keywords": [
+    "angular",
+    "datawindow",
+    "datagrid",
+    "table",
+    "material"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/ngx-datawindow"
+  }
+}

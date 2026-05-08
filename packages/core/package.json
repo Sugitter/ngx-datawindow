@@ -1,0 +1,23 @@
+{
+  "name": "@ngx-datawindow/core",
+  "version": "0.1.0",
+  "description": "Core data engine for ngx-datawindow - framework agnostic",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "peerDependencies": {
+    "typescript": ">=5.0.0"
+  },
+  "keywords": [
+    "datawindow",
+    "datagrid",
+    "datastore",
+    "table",
+    "powerbuilder"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/ngx-datawindow"
+  }
+}
