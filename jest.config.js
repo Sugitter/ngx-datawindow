@@ -2,7 +2,7 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
-  roots: ['<rootDir>/src'],
+  roots: ['<rootDir>/projects'],
   testMatch: ['**/*.test.ts'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
@@ -17,9 +17,9 @@ module.exports = {
     }]
   },
   collectCoverageFrom: [
-    'src/lib/**/*.ts',
-    '!src/**/*.d.ts',
-    '!src/**/*.test.ts'
+    'projects/**/*.ts',
+    '!projects/**/*.d.ts',
+    '!projects/**/*.test.ts'
   ],
   globals: {
     'ts-jest': {

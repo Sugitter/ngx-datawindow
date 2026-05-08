@@ -1,11 +1,13 @@
 /**
- * DataStore Phase 1 功能测试
- * 
+ * DataStore Phase 1 功能测试 — Jest 标准格式
+ *
  * 测试内容：
  * 1. 列级变更跟踪
  * 2. ItemChanged 拒绝机制
  * 3. 撤销栈 (Undo/Redo)
  * 4. 完整事件链
+ * 5. 集成场景
+ * 6. 边界条件
  */
 
 import {
@@ -13,15 +15,8 @@ import {
   DataStoreConfig,
   FieldDefinition,
   DataRow,
-  FieldChange,
-  FieldChangeRecord,
-  RowChangeHistory,
-  ItemChangedEvent,
-  ItemChangedAction,
-  UndoStack,
   DataStoreEvent,
   DataStoreEventType,
-  CommandType,
 } from './datastore';
 
 // ============================================================================
@@ -36,7 +31,7 @@ const employeeConfig: DataStoreConfig = {
     { name: 'id', type: 'number', required: true, readonly: true },
     { name: 'name', type: 'string', required: true, displayName: '姓名' },
     { name: 'department', type: 'string', displayName: '部门' },
-    { name: 'salary', type: 'number', displayName: '薪资', 
+    { name: 'salary', type: 'number', displayName: '薪资',
       itemValidate: (oldVal, newVal) => {
         const newSalary = newVal as number;
         if (newSalary < 0) return '薪资不能为负数';
@@ -55,424 +50,624 @@ const initialData = [
 ];
 
 // ============================================================================
-// 测试工具
+// Test Suite: Phase 1 列级变更跟踪
 // ============================================================================
 
-let testsPassed = 0;
-let testsFailed = 0;
+describe('DataStore Phase 1: 列级变更跟踪', () => {
+  let store: DataStoreImpl;
 
-function assert(condition: boolean, message: string): void {
-  if (condition) {
-    console.log(`✅ ${message}`);
-    testsPassed++;
-  } else {
-    console.error(`❌ ${message}`);
-    testsFailed++;
-  }
-}
+  beforeEach(() => {
+    store = new DataStoreImpl(employeeConfig);
+    store.setData(initialData);
+  });
 
-function assertEqual<T>(actual: T, expected: T, message: string): void {
-  const isEqual = JSON.stringify(actual) === JSON.stringify(expected);
-  if (isEqual) {
-    console.log(`✅ ${message}`);
-    testsPassed++;
-  } else {
-    console.error(`❌ ${message}`);
-    console.error(`   Expected: ${JSON.stringify(expected)}`);
-    console.error(`   Actual:   ${JSON.stringify(actual)}`);
-    testsFailed++;
-  }
-}
+  afterEach(() => {
+    store.reset();
+  });
 
-function logSection(title: string): void {
-  console.log(`\n${'='.repeat(60)}`);
-  console.log(` ${title}`);
-  console.log('='.repeat(60));
-}
+  it('更新单个字段后能获取变更记录', async () => {
+    const result = await store.updateRow(1, { salary: 28000 });
+    expect(result.success).toBe(true);
+
+    const changes = store.getRowFieldChanges(1);
+    expect(changes.length).toBe(1);
+    expect(changes[0].field).toBe('salary');
+    expect(changes[0].change.oldValue).toBe(25000);
+    expect(changes[0].change.newValue).toBe(28000);
+  });
+
+  it('批量更新多个字段产生多个变更记录', async () => {
+    const result = await store.updateRow(2, { name: '李四（已改名）', salary: 20000 });
+    expect(result.success).toBe(true);
+
+    const changes = store.getRowFieldChanges(2);
+    expect(changes.length).toBe(2);
+  });
+
+  it('获取变更历史记录', async () => {
+    await store.updateRow(2, { name: '李四（已改名）', salary: 20000 });
+    const history = store.getRowChangeHistory(2);
+    expect(history).not.toBeNull();
+    expect(history!.changes.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('获取单个字段变更详情', async () => {
+    await store.updateRow(2, { salary: 20000 });
+    const salaryChange = store.getFieldChange(2, 'salary');
+    expect(salaryChange).not.toBeNull();
+    expect(salaryChange!.oldValue).toBe(18000);
+    expect(salaryChange!.newValue).toBe(20000);
+  });
+
+  it('获取原始值不受当前修改影响', async () => {
+    await store.updateRow(2, { salary: 22000 });
+    const originalValue = store.getFieldOriginalValue(2, 'salary');
+    expect(originalValue).toBe(18000);
+  });
+
+  it('getChangedRows 返回所有变更行', async () => {
+    await store.updateRow(1, { salary: 28000 });
+    await store.updateRow(2, { salary: 20000 });
+    const changedRows = store.getChangedRows();
+    expect(changedRows.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('undoFieldChange 撤销单个字段变更', async () => {
+    await store.updateRow(2, { salary: 22000 });
+    const undoResult = store.undoFieldChange(2, 'salary');
+    expect(undoResult).toBe(true);
+
+    const row2 = store.getRowById(2);
+    expect(row2!.raw['salary']).toBe(18000);
+  });
+
+  it('undoFieldChange 恢复后行状态正确', async () => {
+    await store.updateRow(2, { salary: 22000 });
+    store.undoFieldChange(2, 'salary');
+    const row = store.getRowById(2);
+    expect(row!.raw['salary']).toBe(18000);
+    expect(row!.raw['name']).toBe('李四');
+  });
+});
 
 // ============================================================================
-// 测试用例
+// Test Suite: Phase 1 ItemChanged 拒绝机制
 // ============================================================================
 
-async function runTests(): Promise<void> {
-  logSection('Phase 1: 列级变更跟踪测试');
-  await testColumnLevelTracking();
+describe('DataStore Phase 1: ItemChanged 拒绝机制', () => {
+  let store: DataStoreImpl;
 
-  logSection('Phase 1: ItemChanged 拒绝机制测试');
-  await testItemChangedRejection();
+  beforeEach(() => {
+    store = new DataStoreImpl(employeeConfig);
+    store.setData(initialData);
+  });
 
-  logSection('Phase 1: 撤销栈测试');
-  await testUndoStack();
+  afterEach(() => {
+    store.reset();
+  });
 
-  logSection('Phase 1: 完整事件链测试');
-  await testEventChain();
+  it('正常更新应该成功', async () => {
+    const result = await store.updateRow(1, { salary: 28000 });
+    expect(result.success).toBe(true);
+  });
 
-  logSection('Phase 1: 集成测试');
-  await testIntegration();
+  it('负数薪资被字段级 itemValidate 拒绝', async () => {
+    const result = await store.updateRow(1, { salary: -1000 });
+    expect(result.success).toBe(false);
+    expect(result.rejected).toBeDefined();
+    expect(result.rejected!.rejectReason!.code).toBe('FIELD_VALIDATION_FAILED');
+  });
 
-  logSection('测试结果汇总');
-  console.log(`\n通过: ${testsPassed}`);
-  console.log(`失败: ${testsFailed}`);
-  console.log(`总计: ${testsPassed + testsFailed}`);
-}
+  it('超过 100 万的薪资被拒绝', async () => {
+    const result = await store.updateRow(1, { salary: 2000000 });
+    expect(result.success).toBe(false);
+    expect(result.rejected).toBeDefined();
+  });
 
-// ── 列级变更跟踪测试 ────────────────────────────────────────────────────────
-
-async function testColumnLevelTracking(): Promise<void> {
-  const store = new DataStoreImpl(employeeConfig);
-  store.setData(initialData);
-
-  // Test 1: 修改单个字段
-  const result1 = await store.updateRow(1, { salary: 28000 });
-  assert(result1.success, '更新薪资应该成功');
-
-  const changes1 = store.getRowFieldChanges(1);
-  assert(changes1.length === 1, '应该有 1 个字段变更');
-  assert(changes1[0].field === 'salary', '变更字段应该是 salary');
-  assert(changes1[0].change.oldValue === 25000, '旧值应该是 25000');
-  assert(changes1[0].change.newValue === 28000, '新值应该是 28000');
-
-  // Test 2: 修改多个字段
-  const result2 = await store.updateRow(2, { name: '李四（已改名）', salary: 20000 });
-  assert(result2.success, '批量更新应该成功');
-
-  const changes2 = store.getRowFieldChanges(2);
-  assert(changes2.length === 2, '应该有 2 个字段变更');
-
-  // Test 3: 获取变更历史
-  const history = store.getRowChangeHistory(2);
-  assert(history !== null, '应该有变更历史');
-  assert(history!.changes.length >= 2, '历史记录应该有至少 2 条');
-
-  // Test 4: 获取单个字段变更
-  const salaryChange = store.getFieldChange(2, 'salary');
-  assert(salaryChange !== null, '应该有薪资变更记录');
-  assert(salaryChange!.oldValue === 18000, '旧薪资应该是 18000');
-
-  // Test 5: 获取原始值
-  const originalValue = store.getFieldOriginalValue(2, 'salary');
-  assert(originalValue === 18000, '原始薪资应该是 18000');
-
-  // Test 6: 获取所有变更行
-  const changedRows = store.getChangedRows();
-  assert(changedRows.length >= 2, '至少有 2 行有变更');
-
-  // Test 7: 撤销单个字段变更
-  const undoResult = store.undoFieldChange(2, 'salary');
-  assert(undoResult, '撤销应该成功');
-
-  const row2 = store.getRowById(2);
-  assert(row2!.raw['salary'] === 18000, '薪资应该恢复到 18000');
-
-  // Test 8: 获取修改后的行状态 - 新增行撤销 salary 后，name 没变，salary 也没变（恢复），状态应为 'new'
-  // 因为 row2 是新增行，撤销后所有变更都恢复了，状态保持 'new'
-  const expectedStatus = row2!.status; // 可能是 'new' 或 'modified'，取决于实现
-  assert(row2!.status === 'new' || row2!.status === 'modified', 
-    `行状态应该是 new 或 modified（实际: ${row2!.status}）`);
-
-  console.log('\n列级变更跟踪测试完成');
-}
-
-// ── ItemChanged 拒绝机制测试 ─────────────────────────────────────────────────
-
-async function testItemChangedRejection(): Promise<void> {
-  const store = new DataStoreImpl(employeeConfig);
-  store.setData(initialData);
-
-  // Test 1: 正常更新应该成功
-  const result1 = await store.updateRow(1, { salary: 28000 });
-  assert(result1.success, '正常薪资更新应该成功');
-
-  // Test 2: 负数薪资应该被拒绝（字段定义的 itemValidate）
-  const result2 = await store.updateRow(1, { salary: -1000 });
-  assert(!result2.success, '负数薪资应该被拒绝');
-  assert(result2.rejected !== undefined, '应该有拒绝原因');
-  assert(result2.rejected!.rejectReason!.code === 'FIELD_VALIDATION_FAILED', '拒绝原因是字段校验失败');
-
-  // Test 3: 超过限制的薪资应该被拒绝
-  const result3 = await store.updateRow(1, { salary: 2000000 });
-  assert(!result3.success, '超限薪资应该被拒绝');
-
-  // Test 4: 注册自定义 ItemChanged 处理器
-  const unsubscribe = store.onItemChanged(async (event) => {
-    // 拒绝所有技术部改成薪资 > 50000
-    if (event.field === 'salary') {
-      const row = store.getRowById(event.rowId);
-      if (row && row.raw['department'] === '技术部' && (event.newValue as number) > 50000) {
-        event.rejectReason = { code: 'OVER_LIMIT', message: '技术部薪资不能超过 50000' };
-        return 'reject';
+  it('注册自定义 ItemChanged 处理器拒绝超限', async () => {
+    const unsubscribe = store.onItemChanged((event) => {
+      if (event.field === 'salary') {
+        const row = store.getRowById(event.rowId);
+        if (row && row.raw['department'] === '技术部' && (event.newValue as number) > 50000) {
+          event.rejectReason = { code: 'OVER_LIMIT', message: '技术部薪资不能超过 50000' };
+          return 'reject' as const;
+        }
       }
-    }
-    return 'accept';
-  });
-
-  // Test 5: 自定义处理器应该能拒绝
-  const result4 = await store.updateRow(1, { salary: 60000 });
-  assert(!result4.success, '超过 50000 的技术部薪资应该被拒绝');
-
-  // Test 6: 销售部不受限制
-  const result5 = await store.updateRow(2, { salary: 60000 });
-  assert(result5.success, '销售部薪资超过 50000 应该允许');
-
-  // 清理
-  unsubscribe();
-
-  // Test 7: 移除处理器后应该能更新
-  const result6 = await store.updateRow(1, { salary: 60000 });
-  assert(result6.success, '移除处理器后应该能更新');
-
-  console.log('\nItemChanged 拒绝机制测试完成');
-}
-
-// ── 撤销栈测试 ──────────────────────────────────────────────────────────────
-
-async function testUndoStack(): Promise<void> {
-  const store = new DataStoreImpl(employeeConfig);
-  store.setData(initialData);
-
-  // Test 1: 初始状态不能撤销
-  const stack1 = store.getUndoStack();
-  assert(!stack1.canUndo, '初始状态不能撤销');
-  assert(!stack1.canRedo, '初始状态不能重做');
-
-  // Test 2: 添加操作后可以撤销
-  store.addRow({ id: 4, name: '赵六', department: '财务部', salary: 20000, email: 'zhaoliu@company.com' });
-  const stack2 = store.getUndoStack();
-  assert(stack2.canUndo, '添加后可以撤销');
-  assert(stack2.undoCount === 1, '撤销栈深度为 1');
-
-  // Test 3: 撤销操作
-  const undoResult = store.undo();
-  assert(undoResult, '撤销应该成功');
-  const stack3 = store.getUndoStack();
-  assert(!stack3.canUndo, '撤销后栈空，不能再撤销');
-  assert(stack3.canRedo, '撤销后可以重做');
-  assert(store.getRowCount() === 3, '撤销后应该恢复到 3 行');
-
-  // Test 4: 重做操作 - 需要更仔细地检查撤销栈状态
-  // undo 后 addRow 命令已被弹出，所以 undo 栈为空，redo 栈有 1 条
-  const stackBeforeRedo = store.getUndoStack();
-  assert(stackBeforeRedo.undoCount === 0, '撤销后 undo 栈应该为空（addRow 已弹出）');
-  assert(stackBeforeRedo.redoCount === 1, '撤销后 redo 栈应该有 1 条（addRow）');
-  
-  const redoResult = store.redo();
-  assert(redoResult, '重做应该成功');
-  
-  const stackAfterRedo = store.getUndoStack();
-  assert(stackAfterRedo.canUndo, '重做后可以撤销');
-  assert(!stackAfterRedo.canRedo, '重做后不能重做');
-  assert(store.getRowCount() === 4, '重做后应该有 4 行');
-  
-  // Test 5: 连续撤销 - 确保能正确恢复所有状态
-  // 注意：undo 后 addRow 命令已被弹出，所以这里只能撤销 updateRow 命令
-  store.updateRow(1, { salary: 30000 });
-  store.updateRow(2, { salary: 25000 });
-  
-  store.undo();  // 撤销 salary=25000 的 updateRow
-  const row2AfterUndo = store.getRowById(2);
-  assert(row2AfterUndo!.raw['salary'] === 18000, '第一次撤销后，id=2 的薪资应该恢复');
-
-  store.undo();  // 撤销 salary=30000 的 updateRow
-  const row1AfterUndo = store.getRowById(1);
-  assert(row1AfterUndo!.raw['salary'] === 25000, '第二次撤销后，id=1 的薪资应该恢复');
-
-  // Test 6: 获取撤销历史
-  const history = store.getUndoHistory();
-  console.log(`   🔍 撤销历史记录数: ${history.length}, 类型: ${history.map(h => h.type).join(', ')}`);
-  assert(history.length >= 0, '撤销历史应该有记录');
-
-  // Test 7: 新操作会清空重做栈
-  store.redo(); // 重做一次
-  store.redo(); // 再重做一次
-  
-  // 在重做栈非空时添加新操作
-  store.addRow({ id: 5, name: '孙七', department: '市场部', salary: 22000, email: 'sunqi@company.com' });
-  
-  const stackAfterNew = store.getUndoStack();
-  assert(!stackAfterNew.canRedo, '新操作后重做栈应该被清空');
-
-  // Test 8: 清空撤销历史
-  store.clearUndoHistory();
-  const stackCleared = store.getUndoStack();
-  assert(!stackCleared.canUndo, '清空后不能撤销');
-  assert(!stackCleared.canRedo, '清空后不能重做');
-
-  console.log('\n撤销栈测试完成');
-}
-
-// ── 完整事件链测试 ─────────────────────────────────────────────────────────
-
-async function testEventChain(): Promise<void> {
-  const store = new DataStoreImpl(employeeConfig);
-  store.setData(initialData);
-
-  const events: DataStoreEvent[] = [];
-
-  // 注册所有事件监听
-  const eventTypes: DataStoreEventType[] = [
-    'retrieveStart', 'retrieveEnd', 'itemChanged', 'itemChangedRejected',
-    'itemFocusChanged', 'saveStart', 'saveEnd', 'rowStatusChanged', 'undoStackChanged',
-    'rowAdded', 'rowUpdated', 'rowRemoved', 'bufferChanged', 'reset'
-  ];
-
-  const unsubscribes = eventTypes.map(type => {
-    return store.on(type, (event) => {
-      events.push(event);
-      console.log(`   📡 事件触发: ${event.type}`);
+      return 'accept' as const;
     });
+
+    try {
+      const result = await store.updateRow(1, { salary: 60000 }); // 技术部 id=1
+      expect(result.success).toBe(false);
+    } finally {
+      unsubscribe();
+    }
   });
 
-  console.log('\n触发事件链...');
+  it('同一处理器对其他部门不受限制', async () => {
+    const unsubscribe = store.onItemChanged((event) => {
+      if (event.field === 'salary') {
+        const row = store.getRowById(event.rowId);
+        if (row && row.raw['department'] === '技术部' && (event.newValue as number) > 50000) {
+          event.rejectReason = { code: 'OVER_LIMIT', message: '技术部薪资不能超过 50000' };
+          return 'reject' as const;
+        }
+      }
+      return 'accept' as const;
+    });
 
-  // Test 1: retrieveStart 和 retrieveEnd
-  const newStore = new DataStoreImpl(employeeConfig);
-  const retrieveEvents: DataStoreEvent[] = [];
-  newStore.on('retrieveStart', e => retrieveEvents.push(e));
-  newStore.on('retrieveEnd', e => retrieveEvents.push(e));
-  
-  newStore.setData(initialData);
-  assert(retrieveEvents.length === 2, '应该有 retrieveStart 和 retrieveEnd 事件');
-  assert(retrieveEvents[0].type === 'retrieveStart', '第一个事件是 retrieveStart');
-  assert(retrieveEvents[1].type === 'retrieveEnd', '第二个事件是 retrieveEnd');
-
-  // Test 2: itemChanged 事件
-  const itemChangedEvents: DataStoreEvent[] = [];
-  newStore.on('itemChanged', e => itemChangedEvents.push(e));
-  
-  await newStore.updateRow(1, { salary: 30000 });
-  assert(itemChangedEvents.length === 1, '应该有 1 个 itemChanged 事件');
-
-  // Test 3: rowStatusChanged 事件 - 创建新行并修改
-  const statusChangedEvents: DataStoreEvent[] = [];
-  
-  // 重新创建 store 以确保监听器在事件之前注册
-  const statusStore = new DataStoreImpl(employeeConfig);
-  statusStore.setData(initialData);
-  statusStore.on('rowStatusChanged', e => statusChangedEvents.push(e));
-  
-  // 新增一行 - 状态为 new
-  const newRow = statusStore.addRow({ id: 99, name: '测试', department: '测试部', salary: 10000, email: 'test@test.com' });
-  
-  // 修改新增行 - new -> new（不触发 rowStatusChanged，因为 new 状态不变）
-  // 但对于 normal 行修改，应该触发 rowStatusChanged（normal -> modified）
-  const normalRow = statusStore.getRowById(1);
-  if (normalRow && normalRow.status !== 'new') {
-    await statusStore.updateRow(1, { salary: 30000 });
-  }
-  
-  // 检查 rowStatusChanged 是否触发
-  // 注意：根据实现，只有 normal -> modified 才会触发
-  const normalStatusChanged = statusChangedEvents.some(e => {
-    const data = e.data as { oldStatus: string; newStatus: string };
-    return data && data.oldStatus === 'normal' && data.newStatus === 'modified';
+    try {
+      const result = await store.updateRow(2, { salary: 60000 }); // 销售部，不受限
+      expect(result.success).toBe(true);
+    } finally {
+      unsubscribe();
+    }
   });
-  
-  // 如果是 new 行修改，不会触发（new -> new），这是预期行为
-  if (normalRow?.status === 'new') {
-    assert(true, '新增行状态保持 new，不触发 rowStatusChanged（符合预期）');
-  } else {
-    assert(statusChangedEvents.length >= 0, '可能有 rowStatusChanged 事件（取决于行的原始状态）');
-  }
 
-  // Test 4: itemFocusChanged 事件
-  const focusChangedEvents: DataStoreEvent[] = [];
-  newStore.on('itemFocusChanged', e => focusChangedEvents.push(e));
-  
-  newStore.setFocusedRow(1);
-  assert(focusChangedEvents.length === 1, '应该有 itemFocusChanged 事件');
-  
-  newStore.setFocusedRow(2);
-  assert(focusChangedEvents.length === 2, '改变焦点应该触发事件');
-  
-  const focusData = focusChangedEvents[1].data as { previousRowId: number | null; currentRowId: number | null };
-  assert(focusData.previousRowId === 1, '前一个焦点行应该是 1');
-  assert(focusData.currentRowId === 2, '当前焦点行应该是 2');
+  it('移除处理器后更新正常进行', async () => {
+    const unsubscribe = store.onItemChanged(() => 'reject' as const);
+    unsubscribe();
 
-  // Test 5: undoStackChanged 事件
-  const undoStackChangedEvents: DataStoreEvent[] = [];
-  newStore.on('undoStackChanged', e => undoStackChangedEvents.push(e));
-  
-  newStore.addRow({ id: 6, name: '测试', department: '测试部', salary: 10000, email: 'test@test.com' });
-  assert(undoStackChangedEvents.length >= 1, '添加行应该触发 undoStackChanged');
+    const result = await store.updateRow(1, { salary: 60000 });
+    expect(result.success).toBe(true);
+  });
 
-  // 清理
-  unsubscribes.forEach(fn => fn());
+  it('拒绝后当前值保持不变', async () => {
+    const before = store.getRowById(1);
+    const beforeSalary = before!.raw['salary'];
 
-  console.log('\n完整事件链测试完成');
-}
+    const result = await store.updateRow(1, { salary: -1000 });
+    expect(result.success).toBe(false);
 
-// ── 集成测试 ────────────────────────────────────────────────────────────────
-
-async function testIntegration(): Promise<void> {
-  console.log('\n综合场景测试...');
-
-  const store = new DataStoreImpl(employeeConfig);
-  store.setData(initialData);
-
-  // 场景: 模拟用户编辑会话
-
-  // 1. 用户选择了第一行
-  store.setFocusedRow(1);
-  assert(store.focusedRowId === 1, '焦点行应该是 1');
-
-  // 2. 用户修改了薪资
-  const updateResult = await store.updateRow(1, { salary: 30000 });
-  assert(updateResult.success, '薪资更新成功');
-
-  // 3. 用户修改了部门（拒绝 - 不能改成 HR）
-  const deptUpdateResult = await store.updateRow(1, { department: 'HR' });
-  // 这里没有设置拒绝逻辑，所以应该成功（我们只是演示流程）
-
-  // 4. 查看所有变更
-  const changedRows = store.getChangedRows();
-  assert(changedRows.length >= 1, '有变更的行');
-
-  // 5. 用户撤销了薪资修改
-  store.undoFieldChange(1, 'salary');
-  const row1AfterUndo = store.getRowById(1);
-  assert(row1AfterUndo!.raw['salary'] === 25000, '薪资应该恢复到 25000');
-
-  // 6. 用户再次修改（这次会触发 rowStatusChanged）
-  const updateResultForSave = await store.updateRow(1, { salary: 28000 });
-  assert(updateResultForSave.success, '再次更新应该成功');
-
-  // 7. 用户提交保存
-  const saveEvent = await store.beginSave();
-  // beginSave 会触发 itemChanged 检查，修改的行会进入差异
-  const changedRowsBeforeSave = store.getChangedRows();
-  assert(changedRowsBeforeSave.length >= 0, '可能有修改的行');
-  assert(saveEvent.updateCount.new + saveEvent.updateCount.modified + saveEvent.updateCount.deleted >= 0, '提交前应该获取更新计数');
-
-  // 8. 提交到服务器（模拟）
-  console.log('   📤 提交变更到服务器...');
-  const updates = store.generateDiffUpdates();
-  console.log(`   📤 生成 ${updates.length} 条更新`);
-
-  // 8. 服务器确认后，清除变更状态
-  store.endSave(true);
-  store.clearUpdates();
-
-  // 9. 验证状态已清除
-  const clearedRow = store.getRowById(1);
-  assert(clearedRow!.status === 'normal', '状态应该恢复到 normal');
-  assert(Object.keys(clearedRow!.changes).length === 0, '变更记录应该清除');
-
-  console.log('\n集成测试完成');
-}
+    const after = store.getRowById(1);
+    expect(after!.raw['salary']).toBe(beforeSalary);
+  });
+});
 
 // ============================================================================
-// 运行测试
+// Test Suite: Phase 1 撤销栈
 // ============================================================================
 
-console.log('\n🚀 DataStore Phase 1 功能测试');
-console.log('='.repeat(60));
+describe('DataStore Phase 1: 撤销栈 (Undo/Redo)', () => {
+  let store: DataStoreImpl;
 
-runTests()
-  .then(() => {
-    console.log('\n✅ 所有测试完成');
-    process.exit(testsFailed > 0 ? 1 : 0);
-  })
-  .catch((error) => {
-    console.error('\n❌ 测试执行失败:', error);
-    process.exit(1);
+  beforeEach(() => {
+    store = new DataStoreImpl(employeeConfig);
+    store.setData(initialData);
   });
+
+  afterEach(() => {
+    store.reset();
+  });
+
+  it('初始状态不能撤销也不能重做', () => {
+    const stack = store.getUndoStack();
+    expect(stack.canUndo).toBe(false);
+    expect(stack.canRedo).toBe(false);
+  });
+
+  it('添加操作后可撤销', () => {
+    store.addRow({ id: 4, name: '赵六', department: '财务部', salary: 20000, email: 'zhaoliu@company.com' });
+    const stack = store.getUndoStack();
+    expect(stack.canUndo).toBe(true);
+    expect(stack.undoCount).toBe(1);
+  });
+
+  it('撤销操作成功并清空撤销栈', () => {
+    store.addRow({ id: 4, name: '赵六', department: '财务部', salary: 20000, email: 'zhaoliu@company.com' });
+    const undoResult = store.undo();
+    expect(undoResult).toBe(true);
+
+    const stack = store.getUndoStack();
+    expect(stack.canUndo).toBe(false);
+    expect(stack.canRedo).toBe(true);
+    expect(store.getRowCount()).toBe(3);
+  });
+
+  it('撤销后 redo 可恢复', () => {
+    store.addRow({ id: 4, name: '赵六', department: '财务部', salary: 20000, email: 'zhaoliu@company.com' });
+    store.undo();
+
+    const redoResult = store.redo();
+    expect(redoResult).toBe(true);
+
+    const stack = store.getUndoStack();
+    expect(stack.canUndo).toBe(true);
+    expect(stack.canRedo).toBe(false);
+    expect(store.getRowCount()).toBe(4);
+  });
+
+  it('多次撤销顺序正确', async () => {
+    store.updateRow(1, { salary: 30000 });
+    store.updateRow(2, { salary: 25000 });
+
+    store.undo();
+    expect(store.getRowById(2)!.raw['salary']).toBe(18000);
+
+    store.undo();
+    expect(store.getRowById(1)!.raw['salary']).toBe(25000);
+  });
+
+  it('新操作清空重做栈', () => {
+    store.addRow({ id: 4, name: '赵六', department: '财务部', salary: 20000, email: 'zhaoliu@company.com' });
+    store.undo(); // redo 栈有 1 条
+
+    store.addRow({ id: 5, name: '孙七', department: '市场部', salary: 22000, email: 'sunqi@company.com' });
+
+    const stack = store.getUndoStack();
+    expect(stack.canRedo).toBe(false);
+  });
+
+  it('clearUndoHistory 清空所有历史', () => {
+    store.addRow({ id: 4, name: '赵六', department: '财务部', salary: 20000, email: 'zhaoliu@company.com' });
+    store.updateRow(1, { salary: 30000 });
+    store.clearUndoHistory();
+
+    const stack = store.getUndoStack();
+    expect(stack.canUndo).toBe(false);
+    expect(stack.canRedo).toBe(false);
+  });
+
+  it('撤销已达上限时停止', () => {
+    const limitedConfig: DataStoreConfig = { ...employeeConfig, maxUndoStackSize: 2 };
+    const limitedStore = new DataStoreImpl(limitedConfig);
+    limitedStore.setData(initialData);
+
+    limitedStore.updateRow(1, { salary: 26000 });
+    limitedStore.updateRow(1, { salary: 27000 });
+    limitedStore.updateRow(1, { salary: 28000 });
+    limitedStore.updateRow(1, { salary: 29000 });
+
+    const stack = limitedStore.getUndoStack();
+    expect(stack.undoCount).toBeLessThanOrEqual(2);
+  });
+});
+
+// ============================================================================
+// Test Suite: Phase 1 完整事件链
+// ============================================================================
+
+describe('DataStore Phase 1: 完整事件链', () => {
+  let store: DataStoreImpl;
+
+  beforeEach(() => {
+    store = new DataStoreImpl(employeeConfig);
+    store.setData(initialData);
+  });
+
+  afterEach(() => {
+    store.reset();
+  });
+
+  it('setData 触发 retrieveStart 和 retrieveEnd 事件', () => {
+    const events: DataStoreEvent[] = [];
+    store.on('retrieveStart', e => events.push(e));
+    store.on('retrieveEnd', e => events.push(e));
+
+    store.setData(initialData);
+
+    expect(events.length).toBe(2);
+    expect(events[0].type).toBe('retrieveStart');
+    expect(events[1].type).toBe('retrieveEnd');
+  });
+
+  it('updateRow 触发 itemChanged 事件', async () => {
+    const events: DataStoreEvent[] = [];
+    store.on('itemChanged', e => events.push(e));
+
+    await store.updateRow(1, { salary: 30000 });
+
+    expect(events.length).toBe(1);
+    expect(events[0].type).toBe('itemChanged');
+  });
+
+  it('updateRow 触发 rowUpdated 事件', async () => {
+    const events: DataStoreEvent[] = [];
+    store.on('rowUpdated', e => events.push(e));
+
+    await store.updateRow(1, { salary: 30000 });
+
+    expect(events.length).toBe(1);
+    expect(events[0].type).toBe('rowUpdated');
+  });
+
+  it('addRow 触发 rowAdded 事件', () => {
+    const events: DataStoreEvent[] = [];
+    store.on('rowAdded', e => events.push(e));
+
+    store.addRow({ id: 4, name: '赵六', department: '财务部', salary: 20000, email: 'zhaoliu@company.com' });
+
+    expect(events.length).toBe(1);
+    expect(events[0].type).toBe('rowAdded');
+  });
+
+  it('deleteRow 触发 rowRemoved 事件', () => {
+    const events: DataStoreEvent[] = [];
+    store.on('rowRemoved', e => events.push(e));
+
+    store.deleteRow(1);
+
+    expect(events.length).toBe(1);
+    expect(events[0].type).toBe('rowRemoved');
+  });
+
+  it('setFocusedRow 触发 itemFocusChanged 事件', () => {
+    const events: DataStoreEvent[] = [];
+    store.on('itemFocusChanged', e => events.push(e));
+
+    store.setFocusedRow(1);
+    expect(events.length).toBe(1);
+
+    store.setFocusedRow(2);
+    expect(events.length).toBe(2);
+
+    const data = events[1].data as any;
+    expect(data.previousRowId).toBe(1);
+    expect(data.currentRowId).toBe(2);
+  });
+
+  it('undoStackChanged 在操作后触发', () => {
+    const events: DataStoreEvent[] = [];
+    store.on('undoStackChanged', e => events.push(e));
+
+    store.addRow({ id: 4, name: '赵六', department: '财务部', salary: 20000, email: 'zhaoliu@company.com' });
+
+    expect(events.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('on 返回的 unsubscribe 函数可取消监听', () => {
+    const events: DataStoreEvent[] = [];
+    const unsubscribe = store.on('rowAdded', e => events.push(e));
+
+    store.addRow({ id: 4, name: '赵六', department: '财务部', salary: 20000, email: 'zhaoliu@company.com' });
+    expect(events.length).toBe(1);
+
+    unsubscribe();
+
+    store.addRow({ id: 5, name: '孙七', department: '市场部', salary: 22000, email: 'sunqi@company.com' });
+    expect(events.length).toBe(1); // 不再增加
+  });
+
+  it('reset 触发 reset 事件', () => {
+    const events: DataStoreEvent[] = [];
+    store.on('reset', e => events.push(e));
+
+    store.reset();
+
+    expect(events.length).toBe(1);
+    expect(events[0].type).toBe('reset');
+  });
+
+  it('itemChangedRejected 在拒绝时触发', async () => {
+    const events: DataStoreEvent[] = [];
+    store.on('itemChangedRejected', e => events.push(e));
+
+    const unsubscribe = store.onItemChanged(() => 'reject' as const);
+    try {
+      await store.updateRow(1, { salary: -1000 });
+    } finally {
+      unsubscribe();
+    }
+
+    expect(events.length).toBe(1);
+    expect(events[0].type).toBe('itemChangedRejected');
+  });
+});
+
+// ============================================================================
+// Test Suite: Phase 1 集成场景
+// ============================================================================
+
+describe('DataStore Phase 1: 集成场景', () => {
+  let store: DataStoreImpl;
+
+  beforeEach(() => {
+    store = new DataStoreImpl(employeeConfig);
+    store.setData(initialData);
+  });
+
+  afterEach(() => {
+    store.reset();
+  });
+
+  it('典型用户编辑会话：选择 → 修改 → 撤销 → 提交', async () => {
+    // 1. 选择焦点行
+    store.setFocusedRow(1);
+    expect(store.focusedRowId).toBe(1);
+
+    // 2. 修改薪资
+    const updateResult = await store.updateRow(1, { salary: 30000 });
+    expect(updateResult.success).toBe(true);
+
+    // 3. 查看变更
+    const changedRows = store.getChangedRows();
+    expect(changedRows.length).toBeGreaterThanOrEqual(1);
+
+    // 4. 撤销修改
+    store.undoFieldChange(1, 'salary');
+    const rowAfterUndo = store.getRowById(1);
+    expect(rowAfterUndo!.raw['salary']).toBe(25000);
+
+    // 5. 再次修改
+    const secondUpdate = await store.updateRow(1, { salary: 28000 });
+    expect(secondUpdate.success).toBe(true);
+
+    // 6. 提交保存前获取差异
+    const beginResult = await store.beginSave();
+    expect(beginResult).toBeDefined();
+    expect(beginResult.updateCount).toBeDefined();
+
+    // 7. 生成更新数据
+    const updates = store.generateDiffUpdates();
+    expect(Array.isArray(updates)).toBe(true);
+
+    // 8. 提交后清除状态
+    store.endSave(true);
+    store.clearUpdates();
+
+    const savedRow = store.getRowById(1);
+    expect(savedRow!.status).toBe('normal');
+    expect(Object.keys(savedRow!.changes).length).toBe(0);
+  });
+
+  it('beginSave 返回 updateCount', async () => {
+    await store.updateRow(1, { salary: 30000 });
+
+    const beginResult = await store.beginSave();
+    expect(beginResult).toBeDefined();
+    expect(beginResult.updateCount.new + beginResult.updateCount.modified).toBeGreaterThan(0);
+  });
+
+  it('endSave(true) 触发 saveEnd 事件', () => {
+    const events: DataStoreEvent[] = [];
+    store.on('saveEnd', e => events.push(e));
+    store.endSave(true);
+    expect(events.length).toBe(1);
+  });
+
+  it('getStats 返回正确的缓冲区统计', async () => {
+    store.addRow({ id: 4, name: '赵六', department: '财务部', salary: 20000, email: 'zhaoliu@company.com' });
+    await store.updateRow(1, { salary: 30000 });
+    store.deleteRow(2);
+
+    const stats = store.getStats();
+    // main buffer: 4 rows total (1+3-1deleted+1)
+    expect(stats.main.count).toBeGreaterThanOrEqual(1);
+    expect(stats.deleted.count).toBeGreaterThanOrEqual(1);
+  });
+
+  it('findMany 按条件查询数据', () => {
+    const result = store.findMany({ field: 'department', operator: 'eq', value: '技术部' });
+    expect(result.length).toBe(2);
+    expect(result.every(r => r.raw['department'] === '技术部')).toBe(true);
+  });
+
+  it('sort 按字段排序', () => {
+    const result = store.sort([{ field: 'salary', direction: 'desc' }]);
+    expect(result[0].raw['salary']).toBe(35000); // 王五
+    expect(result[1].raw['salary']).toBe(25000); // 张三
+    expect(result[2].raw['salary']).toBe(18000); // 李四
+  });
+
+  it('registerAggregation 注册并执行聚合', () => {
+    store.registerAggregation({
+      id: 'total_salary',
+      name: '总薪资',
+      type: 'sum',
+      field: 'salary',
+    });
+
+    const result = store.aggregate('total_salary');
+    expect(result).toBeDefined();
+    expect(result!.value).toBe(78000); // 25000+18000+35000
+  });
+
+  it('aggregateAll 返回所有聚合结果', () => {
+    store.registerAggregation({ id: 'avg_salary', name: '平均薪资', type: 'avg', field: 'salary' });
+    store.registerAggregation({ id: 'max_salary', name: '最高薪资', type: 'max', field: 'salary' });
+
+    const results = store.aggregateAll();
+    expect(results['avg_salary']).toBeDefined();
+    expect(results['max_salary']).toBeDefined();
+  });
+});
+
+// ============================================================================
+// Test Suite: DataStore 边界条件
+// ============================================================================
+
+describe('DataStore 边界条件', () => {
+  let store: DataStoreImpl;
+
+  beforeEach(() => {
+    store = new DataStoreImpl(employeeConfig);
+    store.setData(initialData);
+  });
+
+  afterEach(() => {
+    store.reset();
+  });
+
+  it('updateRow 传入不存在的 rowId 不抛异常', async () => {
+    const result = await store.updateRow(999, { salary: 30000 });
+    expect(result.success).toBe(false);
+  });
+
+  it('deleteRow 传入不存在的 rowId 返回 false', () => {
+    const result = store.deleteRow(999);
+    expect(result).toBe(false);
+  });
+
+  it('getRowById 不存在返回 undefined', () => {
+    const result = store.getRowById(999);
+    expect(result).toBeUndefined();
+  });
+
+  it('undo 空栈返回 false', () => {
+    const result = store.undo();
+    expect(result).toBe(false);
+  });
+
+  it('redo 空栈返回 false', () => {
+    const result = store.redo();
+    expect(result).toBe(false);
+  });
+
+  it('restoreRow 已删除行恢复正常', () => {
+    store.deleteRow(1);
+    const result = store.restoreRow(1);
+    expect(result).toBe(true);
+  });
+
+  it('永久删除行后 restoreRow 返回 false', () => {
+    store.deleteRow(1);
+    store.permanentDelete(1);
+    const result = store.restoreRow(1);
+    expect(result).toBe(false);
+  });
+
+  it('readonly 字段更新行为正确', async () => {
+    // readonly 字段更新不抛异常
+    const result = await store.updateRow(1, { id: 999 } as any);
+    expect(result).toBeDefined();
+  });
+
+  it('setFocusedRow 传入不存在的 rowId 不抛异常', () => {
+    expect(() => store.setFocusedRow(999)).not.toThrow();
+  });
+
+  it('getFieldChange 对未修改的字段返回 null', () => {
+    const result = store.getFieldChange(1, 'salary');
+    expect(result).toBeNull();
+  });
+
+  it('空数据集 setData([]) 后 getRowCount 为 0', () => {
+    store.setData([]);
+    expect(store.getRowCount()).toBe(0);
+  });
+
+  it('permanentDelete 后 rowCount 行为正确', () => {
+    const before = store.getRowCount();
+    store.permanentDelete(1);
+    const after = store.getRowCount();
+    // permanentDelete 可能移入 deletedRows，getRowCount 计数取决于实现
+    expect(after).toBeLessThanOrEqual(before);
+  });
+
+  it('validate 返回校验结果', () => {
+    const result = store.validate();
+    expect(result).toBeDefined();
+    expect(result.valid).toBeDefined();
+  });
+
+  it('findOne 找到符合条件的单行', () => {
+    const result = store.findOne({ field: 'id', operator: 'eq', value: 1 });
+    expect(result).toBeDefined();
+    expect(result!.raw['name']).toBe('张三');
+  });
+
+  it('findOne 未找到返回 undefined', () => {
+    const result = store.findOne({ field: 'id', operator: 'eq', value: 9999 });
+    expect(result).toBeUndefined();
+  });
+});

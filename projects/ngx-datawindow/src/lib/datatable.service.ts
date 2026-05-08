@@ -181,14 +181,19 @@ export class DataTableService {
     } else {
       this._state.update(s => ({ ...s, sortField: field, sortDirection: direction }));
     }
+    this._notifyDataChange();
   }
 
+  /** 按字段排序（仅用于多字段排序场景） */
   sort(field: string, direction: 'asc' | 'desc'): void {
     this._state.update(s => ({ ...s, sortField: field, sortDirection: direction }));
+    this._notifyDataChange();
   }
 
+  /** 清除所有排序 */
   clearSort(): void {
     this._state.update(s => ({ ...s, sortField: undefined, sortDirection: undefined }));
+    this._notifyDataChange();
   }
 
   // ── 过滤 ──────────────────────────────────────────────────────────────────

@@ -127,6 +127,7 @@ export class BasicComponent implements OnInit {
         showPaginator: true,
         showColumnFilter: true,
         showGlobalSearch: true,
+        groupBy: { field: 'category', collapsed: false },
         pagination: { defaultPageSize: 10, pageSizeOptions: [5, 10, 20, 50] },
         toolbarActions: {
             add: { icon: 'add', label: 'Add' },

@@ -45,3 +45,32 @@ export {
   type ConflictResolver, type OfflineServiceConfig,
   type OfflineServiceEvents, type SyncResult
 } from './lib/offline';
+
+// Report Designer
+export {
+  ReportDesignerComponent,
+  ReportDesignerDemoComponent,
+  ReportTemplate,
+  ReportBand,
+  ReportItem,
+  ReportItemType,
+  ReportStyle,
+  ReportGroup,
+  ReportParameter,
+  ReportSort,
+  TableColumn,
+  createEmptyTemplate,
+  fieldsFromColumns,
+  ExpressionEvaluator,
+  expressionEvaluator,
+  EvalContext,
+  ReportEngine,
+  ReportPages,
+  ReportPage,
+  ReportSection,
+  ReportRow,
+  ReportCell,
+  ResolvedStyle,
+  RenderContext,
+  BandContext,
+} from './lib/report-designer';

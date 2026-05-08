@@ -9,61 +9,61 @@ import { RawValue } from './datastore';
 export interface ColumnConfig<T = unknown> {
   /** 字段名（对应数据对象的属性） */
   field: string;
-  
+
   /** 显示名称 */
   header: string;
-  
+
   /** 列宽度 */
   width?: string;
-  
+
   /** 最小宽度 */
   minWidth?: string;
-  
+
   /** 排序字段（可以为表达式） */
   sortField?: string;
-  
+
   /** 格式化函数 */
   format?: (value: T, row: T) => string;
-  
+
   /** 自定义单元格模板 */
   cellTemplate?: string;
-  
+
   /** 是否可排序 */
   sortable?: boolean;
-  
+
   /** 是否可过滤 */
   filterable?: boolean;
-  
+
   /** 过滤类型 */
   filterType?: 'text' | 'number' | 'select' | 'date' | 'boolean';
-  
+
   /** 过滤选项（用于 select 类型） */
   filterOptions?: { value: unknown; label: string }[];
-  
+
   /** 是否可编辑 */
   editable?: boolean;
-  
+
   /** 编辑类型 */
   editType?: 'text' | 'number' | 'select' | 'date' | 'checkbox' | 'textarea';
-  
+
   /** 编辑选项（用于 select 类型） */
   editOptions?: { value: unknown; label: string }[];
-  
+
   /** 是否显示 */
   visible?: boolean;
-  
+
   /** 列对齐方式 */
   align?: 'left' | 'center' | 'right';
-  
-  /** 固定列（left | right | null） */
-  sticky?: 'left' | 'right' | null;
-  
+
+  /** 固定列（start | end | null） — 实现 sticky 冻结列 */
+  sticky?: 'start' | 'end' | null;
+
   /** 固定位置索引 */
   stickyIndex?: number;
-  
+
   /** 虚拟列（不实际存储，只计算显示） */
   virtual?: boolean;
-  
+
   /** 聚合显示 */
   aggregate?: {
     /** 聚合类型 */
@@ -71,7 +71,7 @@ export interface ColumnConfig<T = unknown> {
     /** 精度（用于 number 类型） */
     precision?: number;
   };
-  
+
   /** 元数据 */
   metadata?: Record<string, unknown>;
 
@@ -89,25 +89,25 @@ export interface ColumnConfig<T = unknown> {
 export interface TableConfig {
   /** 表格 ID */
   id?: string;
-  
+
   /** 表格标题 */
   title?: string;
-  
+
   /** 是否显示标题栏 */
   showTitle?: boolean;
-  
+
   /** 是否显示工具栏 */
   showToolbar?: boolean;
-  
+
   /** 是否显示分页器 */
   showPaginator?: boolean;
-  
+
   /** 是否显示列过滤 */
   showColumnFilter?: boolean;
-  
+
   /** 是否显示全局搜索 */
   showGlobalSearch?: boolean;
-  
+
   /** 工具栏按钮配置 */
   toolbarActions?: {
     /** 新增按钮 */
@@ -121,25 +121,55 @@ export interface TableConfig {
     /** 自定义按钮 */
     custom?: Array<{ id: string; icon?: string; label: string; action: string }>;
   };
-  
+
   /** 行选择模式 */
   selectionMode?: 'none' | 'single' | 'multiple';
-  
+
+  /** 多选模式下是否启用点击选中（点击行直接切换选中状态）*/
+  multiClick?: boolean;
+
+  /** 多选模式下是否启用范围选择（Shift+点击选中两个行之间的所有行）*/
+  rangeSelect?: boolean;
+
+  /** 行分组配置（按字段分组显示） */
+  groupBy?: {
+    /** 分组字段 */
+    field: string;
+    /** 分组标题模板 */
+    titleTemplate?: (groupValue: any, count: number) => string;
+    /** 是否默认折叠 */
+    collapsed?: boolean;
+  };
+
+  /** 树形展示配置（树状数据展开/折叠） */
+  treeField?: {
+    /** 树层级字段（如 children） */
+    childrenField: string;
+    /** 树层级缩进宽度（px） */
+    indentWidth?: number;
+    /** 是否默认展开所有 */
+    expandAll?: boolean;
+    /** 展开/折叠图标 */
+    expandIcon?: string;
+    /** 折叠/展开图标 */
+    collapseIcon?: string;
+  };
+
   /** 行样式函数 */
   rowClass?: (row: unknown) => string | Record<string, boolean>;
-  
+
   /** 行点击事件 */
   rowClick?: boolean | ((row: unknown, event: Event) => void);
-  
+
   /** 行双击事件 */
   rowDoubleClick?: boolean | ((row: unknown, event: Event) => void);
-  
+
   /** 空数据提示 */
   emptyMessage?: string;
-  
+
   /** 加载状态提示 */
   loadingMessage?: string;
-  
+
   /** 分页配置 */
   pagination?: {
     /** 每页选项 */
@@ -151,16 +181,16 @@ export interface TableConfig {
     /** 是否显示总数 */
     showTotalCount?: boolean;
   };
-  
+
   /** 工具栏高度 */
   toolbarHeight?: string;
-  
+
   /** 表头高度 */
   headerHeight?: string;
-  
+
   /** 行高度 */
   rowHeight?: string;
-  
+
   /** 虚拟滚动配置 */
   virtualScroll?: {
     /** 是否启用虚拟滚动 */
@@ -174,7 +204,7 @@ export interface TableConfig {
     /** 最大渲染行数（防止一次渲染过多） */
     maxBufferSize?: number;
   };
-  
+
   /** 响应式配置 */
   responsive?: {
     /** 响应式断点 */
@@ -200,28 +230,28 @@ export interface EditState {
 export interface TableState {
   /** 当前页码 */
   pageIndex: number;
-  
+
   /** 每页数量 */
   pageSize: number;
-  
+
   /** 排序字段 */
   sortField?: string;
-  
+
   /** 排序方向 */
   sortDirection?: 'asc' | 'desc';
-  
+
   /** 全局搜索关键词 */
   globalSearch?: string;
-  
+
   /** 列过滤条件 */
   columnFilters: Record<string, unknown>;
-  
+
   /** 选中的行 */
   selectedRows: Set<number>;
-  
+
   /** 当前编辑状态 */
   editingCell?: EditState;
-  
+
   /** 是否加载中 */
   loading: boolean;
 }

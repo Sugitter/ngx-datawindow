@@ -93,7 +93,7 @@ export class VirtualComponent implements OnInit {
         showColumnFilter: true,
         virtualScroll: {
             enabled: true,
-            rowHeight: 48,
+            rowHeight: 36,
         },
     };
 

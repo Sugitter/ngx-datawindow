@@ -6,7 +6,7 @@
 import {
   Component, Input, Output, EventEmitter, ViewChild, ChangeDetectionStrategy,
   signal, computed, OnInit, OnDestroy, OnChanges, ChangeDetectorRef,
-  ContentChild, TemplateRef
+  ContentChild, TemplateRef, Inject
 } from '@angular/core';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Observable, Subscription } from 'rxjs';
@@ -33,6 +33,8 @@ import {
   ChangeEvent, ExportConfig, DataFeedConfig, HighlightCell
 } from './models';
 import { DataRow, RowId, RawValue, DataStoreConfig } from './datastore';
+import { DataWindowVirtualScrollStrategy, dataWindowVirtualScrollStrategy } from './virtual-scroll-strategy';
+import { VIRTUAL_SCROLL_STRATEGY } from '@angular/cdk/scrolling';
 
 export interface ColumnFilterEvent { field: string; value: unknown; }
 export interface SortEvent { field: string; direction: 'asc' | 'desc'; }
@@ -168,101 +170,115 @@ export interface ToolbarEvent { action: ToolbarAction; }
       <!-- 表格主体 -->
       <div class="dt-table-wrapper" [class.dt-virtual-mode]="virtualScrollEnabled()" [class.dt-fixed-height]="!autoHeight()">
         @if (virtualScrollEnabled()) {
-          <!-- 虚拟滚动模式 -->
-          <cdk-virtual-scroll-viewport
-            [itemSize]="virtualRowHeight()"
-            class="dt-virtual-viewport"
-            (scrolledIndexChange)="onScrollIndexChange($event)">
-            <table mat-table [dataSource]="virtualData()" matSort (matSortChange)="onSortChange($event)" class="dt-table">
-              <!-- 选择列 -->
-              @if (selectionMode() !== 'none') {
-                <ng-container matColumnDef="select">
-                  <th mat-header-cell *matHeaderCellDef>
+          <!-- ═══ 虚拟滚动模式 — div rows + CDK VirtualScrollStrategy ═══ -->
+          <div class="dt-virtual-container">
+            <!-- 固定表头 -->
+            <div class="dt-virtual-header">
+              <div class="dt-virtual-header-row">
+                @if (selectionMode() !== 'none') {
+                  <div class="dt-virtual-cell dt-virtual-header-cell dt-sticky-left" style="width:48px;min-width:48px;text-align:center;">
                     <mat-checkbox
                       [checked]="isAllSelected()"
                       [indeterminate]="isIndeterminate()"
                       (change)="toggleSelectAll($event.checked)">
                     </mat-checkbox>
-                  </th>
-                  <td mat-cell *matCellDef="let row">
-                    <mat-checkbox
-                      [checked]="isRowSelected(row.id)"
-                      (change)="toggleRowSelect(row.id, $event.checked)"
-                      (click)="$event.stopPropagation()">
-                    </mat-checkbox>
-                  </td>
-                </ng-container>
-              }
-
-              <!-- 数据列 -->
-              @for (col of visibleColumns(); track col.field) {
-                <ng-container [matColumnDef]="col.field">
-                  <th mat-header-cell *matHeaderCellDef
+                  </div>
+                }
+                @for (col of visibleColumns(); track col.field) {
+                  <div class="dt-virtual-cell dt-virtual-header-cell"
+                    [style.width]="col.width || 'auto'"
+                    [style.minWidth]="col.minWidth || '60px'"
                     [style.textAlign]="col.align || 'left'"
-                    [style.width]="col.width"
-                    [mat-sort-header]="col.sortable !== false ? col.field : ''"
-                    [disabled]="col.sortable === false">
+                    [class.dt-sticky-left]="col.sticky === 'start'"
+                    [class.dt-sticky-right]="col.sticky === 'end'"
+                    (click)="onVirtualSortChange(col.field)">
                     {{ col.header }}
                     @if (col.aggregate) {
                       <span class="dt-agg-badge">{{ col.aggregate.type.toUpperCase() }}</span>
                     }
-                  </th>
-                  <td mat-cell *matCellDef="let row"
+                    <div class="dt-resize-handle"
+                      (mousedown)="onResizeStart($event, col.field)"
+                      (click)="$event.stopPropagation()">
+                    </div>
+                  </div>
+                }
+                <div class="dt-virtual-cell dt-virtual-header-cell dt-sticky-right" style="width:96px;min-width:96px;text-align:center;">
+                  操作
+                </div>
+              </div>
+            </div>
+
+            <!-- 虚拟滚动体 -->
+            <cdk-virtual-scroll-viewport
+              class="dt-virtual-viewport"
+              (scrolledIndexChange)="onScrollIndexChange($event)">
+              <div *cdkVirtualFor="let row of virtualData(); trackBy: trackRow; templateCacheSize: 0"
+                   class="dt-virtual-row"
+                   [class.dt-row-selected]="isRowSelected(row._id)"
+                   [class.dt-row-new]="row._status === 'new'"
+                   [class.dt-row-modified]="row._status === 'modified'"
+                   [class.dt-row-deleted]="row._status === 'deleted'"
+                   (click)="onRowClick(row, $event)"
+                   (dblclick)="onRowDoubleClick(row, $event)">
+                @if (selectionMode() !== 'none') {
+                  <div class="dt-virtual-cell dt-sticky-left" style="width:48px;min-width:48px;text-align:center;">
+                    <mat-checkbox
+                      [checked]="isRowSelected(row._id)"
+                      (change)="toggleRowSelect(row._id, $event.checked)"
+                      (click)="$event.stopPropagation()">
+                    </mat-checkbox>
+                  </div>
+                }
+                @for (col of visibleColumns(); track col.field) {
+                  <div class="dt-virtual-cell"
+                    [style.width]="col.width || 'auto'"
+                    [style.minWidth]="col.minWidth || '60px'"
                     [style.textAlign]="col.align || 'left'"
-                    [ngStyle]="col.cellStyle ? col.cellStyle(row[col.field], row) : null"
-                    [ngClass]="col.cellClass ? col.cellClass(row[col.field], row) : ''"
+                    [class.dt-sticky-left]="col.sticky === 'start'"
+                    [class.dt-sticky-right]="col.sticky === 'end'"
                     [class.dt-cell-highlight]="isCellHighlighted(row._id, col.field)">
                     @if (col.cellRenderer) {
                       <span [innerHTML]="sanitizeHtml(col.cellRenderer(row[col.field], row))"></span>
+                    } @else if (col.editable && isEditing(row._id, col.field)) {
+                      <input class="dt-edit-input" [(ngModel)]="editValue"
+                        (blur)="saveEdit(row._id, col.field)"
+                        (keydown.enter)="saveEdit(row._id, col.field)"
+                        (keydown.escape)="cancelEdit()"
+                        [type]="col.editType === 'number' ? 'number' : 'text'"
+                        style="width:100%">
                     } @else if (col.editable) {
-                      <ng-container *ngTemplateOutlet="editCell; context: { $implicit: row, col: col }">
-                      </ng-container>
+                      <span class="dt-cell-editable" (dblclick)="startEdit(row._id, col.field, row[col.field])">
+                        {{ formatCell(row, col) }}
+                      </span>
                     } @else {
                       {{ formatCell(row, col) }}
                     }
-                  </td>
-                </ng-container>
-              }
-
-              <!-- 操作列 -->
-              <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef style="width: 120px">操作</th>
-                <td mat-cell *matCellDef="let row">
-                  @if (rowStatus(row) === 'deleted') {
-                    <button mat-button color="primary" (click)="restoreRow(row.id); $event.stopPropagation()">
+                  </div>
+                }
+                <div class="dt-virtual-cell dt-sticky-right" style="width:96px;min-width:96px;text-align:center;">
+                  @if (row._status === 'deleted') {
+                    <button mat-button color="primary" (click)="restoreRow(row._id); $event.stopPropagation()" style="min-width:auto;padding:0 8px;font-size:12px;">
                       恢复
                     </button>
                   } @else {
-                    <button mat-icon-button matTooltip="编辑"
-                      (click)="editRow(row); $event.stopPropagation()">
-                      <mat-icon>edit</mat-icon>
+                    <button mat-icon-button matTooltip="编辑" (click)="editRow(row); $event.stopPropagation()" style="width:28px;height:28px;">
+                      <mat-icon style="font-size:18px;">edit</mat-icon>
                     </button>
-                    <button mat-icon-button matTooltip="删除" color="warn"
-                      (click)="deleteRow(row.id); $event.stopPropagation()">
-                      <mat-icon>delete</mat-icon>
+                    <button mat-icon-button color="warn" matTooltip="删除" (click)="deleteRow(row._id); $event.stopPropagation()" style="width:28px;height:28px;">
+                      <mat-icon style="font-size:18px;">delete</mat-icon>
                     </button>
                   }
-                </td>
-              </ng-container>
+                </div>
+              </div>
 
-              <tr mat-header-row *matHeaderRowDef="displayedColumns(); sticky: true"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumns()"
-                [class.dt-row-selected]="isRowSelected(row.id)"
-                [class.dt-row-new]="row.status === 'new'"
-                [class.dt-row-modified]="row.status === 'modified'"
-                [class.dt-row-deleted]="row.status === 'deleted'"
-                [class.dt-clickable]="config().rowClick"
-                (click)="onRowClick(row, $event)"
-                (dblclick)="onRowDoubleClick(row, $event)">
-              </tr>
-
-              <tr class="mat-row" *matNoDataRow>
-                <td class="mat-cell dt-empty" [attr.colspan]="displayedColumns().length">
+              <!-- 空状态 -->
+              @if (virtualData().length === 0) {
+                <div class="dt-virtual-empty">
                   {{ config().emptyMessage || '暂无数据' }}
-                </td>
-              </tr>
-            </table>
-          </cdk-virtual-scroll-viewport>
+                </div>
+              }
+            </cdk-virtual-scroll-viewport>
+          </div>
         } @else {
           <!-- 普通分页模式 -->
           <table mat-table [dataSource]="dataSource()" matSort (matSortChange)="onSortChange($event)" class="dt-table">
@@ -516,6 +532,103 @@ export interface ToolbarEvent { action: ToolbarAction; }
       flex: 1;
       overflow: auto;
       position: relative;
+    }
+
+    .dt-table-wrapper.dt-virtual-mode {
+      overflow: auto;
+    }
+
+    .dt-virtual-viewport {
+      height: 100%;
+      min-height: 400px;
+    }
+
+    /* ═══ 虚拟滚动 div 行布局 ═══ */
+    .dt-virtual-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .dt-virtual-header {
+      flex-shrink: 0;
+      border-bottom: var(--dt-grid-width) solid var(--dt-grid-color);
+      overflow: hidden;
+    }
+
+    .dt-virtual-header-row,
+    .dt-virtual-row {
+      display: flex;
+      align-items: center;
+      height: var(--dt-row-height);
+      min-height: var(--dt-row-height);
+      border-bottom: var(--dt-grid-width) solid var(--dt-grid-color);
+    }
+
+    .dt-virtual-row:hover {
+      background: #f5f5f5;
+    }
+
+    .dt-virtual-cell {
+      flex: 0 0 auto;
+      padding: 0 8px;
+      font-size: var(--dt-font-size);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      border-right: var(--dt-grid-width) solid var(--dt-grid-color);
+    }
+
+    .dt-virtual-cell:last-child {
+      border-right: none;
+    }
+
+    .dt-virtual-header-cell {
+      font-weight: 600;
+      background: #fafafa;
+      color: #212121;
+      position: relative;
+      user-select: none;
+      cursor: pointer;
+    }
+
+    .dt-virtual-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+      color: #757575;
+      font-size: var(--dt-font-size);
+    }
+
+    /* 虚拟模式下的行状态颜色 */
+    .dt-virtual-row.dt-row-selected { background: #bbdefb !important; }
+    .dt-virtual-row.dt-row-new { background: #c8e6c9 !important; }
+    .dt-virtual-row.dt-row-modified { background: #fff9c4 !important; }
+    .dt-virtual-row.dt-row-deleted { background: #ffcdd2 !important; opacity: 0.65; text-decoration: line-through; }
+
+    /* 虚拟模式 sticky 列 */
+    .dt-virtual-cell.dt-sticky-left {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      background: inherit;
+    }
+    .dt-virtual-header-cell.dt-sticky-left {
+      background: #fafafa;
+      z-index: 12;
+    }
+    .dt-virtual-cell.dt-sticky-right {
+      position: sticky;
+      right: 0;
+      z-index: 2;
+      background: inherit;
+      box-shadow: -2px 0 6px rgba(0,0,0,0.08);
+    }
+    .dt-virtual-header-cell.dt-sticky-right {
+      background: #fafafa;
+      z-index: 12;
+      box-shadow: -2px 0 6px rgba(0,0,0,0.08);
     }
 
     .dt-table-wrapper.dt-fixed-height {
@@ -784,9 +897,15 @@ export interface ToolbarEvent { action: ToolbarAction; }
     }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [dataWindowVirtualScrollStrategy({ itemSize: 36, minBufferPx: 360, maxBufferPx: 720 })],
 })
 export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
-  constructor(private _service: DataTableService, private _cdr: ChangeDetectorRef, private _sanitizer: DomSanitizer) {}
+  constructor(
+    private _service: DataTableService,
+    private _cdr: ChangeDetectorRef,
+    private _sanitizer: DomSanitizer,
+    @Inject(VIRTUAL_SCROLL_STRATEGY) readonly scrollStrategy: DataWindowVirtualScrollStrategy,
+  ) {}
 
   // ── 输入 ──────────────────────────────────────────────────────────────────
 
@@ -868,7 +987,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     // 初始化虚拟滚动
     const vs = this._tableConfig?.virtualScroll;
     if (vs?.enabled) {
-      this._virtualRowHeight.set(vs.rowHeight ?? 48);
+      this._virtualRowHeight.set(vs.rowHeight ?? 36);
       this._virtualScrollEnabled.set(true);
       this._service!.setPageSize(999999);
       this._syncAllRows();
@@ -915,10 +1034,13 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
   private _editValueInternal: unknown = null;
   get editValue(): unknown { return this._editValueInternal; }
   set editValue(v: unknown) { this._editValueInternal = v; }
-  private _virtualRowHeight = signal(48);
+  private _virtualRowHeight = signal(36);
   private _virtualScrollEnabled = signal(false);
   private _virtualScrollIndex = signal(0);
   private _allRows = signal<DataRow[]>([]);
+
+  /** TrackBy for virtual scroll rows */
+  trackRow = (_index: number, row: any): string => row._id ?? row.id ?? String(_index);
 
   // ── 响应式 ────────────────────────────────────────────────────────────────────────
 
@@ -947,11 +1069,15 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     return result;
   });
 
+  // ── MatTableDataSource（用实例属性，避免每次 computed 重建导致 mat-sort 状态丢失）
+  private _matTableDataSource = new MatTableDataSource<any>([]);
+
   readonly dataSource = computed(() => {
     const result = this._service!.rows();
     const data = result.rows.map((r: DataRow) => ({ ...r.raw, _id: r.id, _status: r.status }));
-    const ds = new MatTableDataSource(data);
-    return ds;
+    // 直接替换 data 而非重建 MatTableDataSource 实例，保留 mat-sort 内部状态
+    this._matTableDataSource.data = data;
+    return this._matTableDataSource;
   });
 
   // ── 虚拟滚动 ─────────────────────────────────────────────────────────────
@@ -962,15 +1088,11 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
   });
 
   readonly virtualRowHeight = computed(() => {
-    return this._tableConfig?.virtualScroll?.rowHeight ?? 48;
+    return this._tableConfig?.virtualScroll?.rowHeight ?? 36;
   });
 
   readonly virtualData = computed(() => {
-    return this._allRows().map(r => ({ ...r.raw, _id: r.id, _status: r.status }));
-  });
-
-  private _totalRowCount = computed(() => {
-    return this._service!.totalRows();
+    return this._allRows().map(r => ({ ...r.raw, _id: r.id, _status: r.status } as any));
   });
 
   // ── 生命周期 ───────────────────────────────────────────────────────────────
@@ -1001,7 +1123,17 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
   private _syncAllRows(): void {
     const ds = this._service!.getDataStore();
     if (ds) {
-      this._allRows.set([...ds.getRows()]);
+      // 应用当前排序规则（使用 query 而非 getRows，否则虚拟滚动排序失效）
+      const s = this._service!.state();
+      const queryOpts: any = { take: 999999 };
+      if (s.sortField) {
+        queryOpts.sort = [{ field: s.sortField, direction: s.sortDirection ?? 'asc' }];
+      }
+      const result = ds.query(queryOpts);
+      this._allRows.set(result.rows);
+      if (this._virtualScrollEnabled()) {
+        this.scrollStrategy.setDataLength(result.total);
+      }
     }
   }
 
@@ -1224,6 +1356,22 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
 
   onSortChange(sort: Sort): void {
     this._service!.setSort(sort.active, sort.direction);
+  }
+
+  /** Toggle sort direction for virtual mode header click */
+  sortDirection(field: string): 'asc' | 'desc' | '' {
+    const state = this._service!.state();
+    if (state.sortField !== field) return 'asc';
+    return state.sortDirection === 'asc' ? 'desc' : state.sortDirection === 'desc' ? '' : 'asc';
+  }
+
+  onVirtualSortChange(field: string): void {
+    // 虚拟滚动模式的排序处理
+    const direction = this.sortDirection(field);
+    this._service!.setSort(field, direction);
+    if (this._virtualScrollEnabled()) {
+      this._syncAllRows();
+    }
   }
 
   onColumnFilter(field: string, value: unknown): void {

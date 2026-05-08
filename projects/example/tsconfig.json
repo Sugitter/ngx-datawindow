@@ -18,7 +18,8 @@
     "module": "ES2022",
     "baseUrl": ".",
     "paths": {
-      "ngx-datawindow": ["../../dist/ngx-datawindow"]
+      "ngx-datawindow": ["../../dist/ngx-datawindow"],
+      "ngx-datawindow/*": ["../../dist/ngx-datawindow/*"]
     }
   },
   "angularCompilerOptions": {

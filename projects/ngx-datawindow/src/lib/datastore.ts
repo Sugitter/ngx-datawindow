@@ -1091,13 +1091,17 @@ export class DataStoreImpl {
 
   /**
    * 同步版本的 updateRow（不进行 ItemChanged 校验）
+   * @deprecated Use updateRow with forceAccept:true instead
    */
-  updateRowSync(
+  async updateRowSync(
     rowId: RowId,
     data: Partial<Record<FieldName, RawValue>>,
     options: { skipUndo?: boolean; skipEvents?: boolean } = {}
-  ): boolean {
-    return this.updateRow(rowId, data, { ...options, skipItemChanged: true, forceAccept: true }).then(r => r.success).catch(() => false) as unknown as boolean;
+  ): Promise<boolean> {
+    // 异步版本：直接调用核心逻辑，跳过 ItemChanged 校验
+    return this.updateRow(rowId, data, { ...options, skipItemChanged: true, forceAccept: true })
+      .then(r => r.success)
+      .catch(() => false);
   }
 
   deleteRow(rowId: RowId, options: { skipUndo?: boolean; skipEvents?: boolean } = {}): boolean {
