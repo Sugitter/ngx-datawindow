@@ -160,7 +160,7 @@ interface BandSummary {
                     <div class="info-content">
                         @if (lastTemplate()) {
                             <div class="info-block">
-                                <h4>Current Template: {{ lastTemplate()!.name }}</h4>
+                                <h4>Current Template: {{ lastTemplate()?.meta?.name ?? 'Untitled' }}</h4>
                                 <div class="template-stats">
                                     <span class="stat">
                                         <mat-icon>layers</mat-icon>
@@ -241,11 +241,11 @@ export class ReportDesignerPageComponent implements OnInit {
         this.totalItems.set(total);
         this.bandSummary.set(
             template.bands.map(band => ({
-                band: band.name,
+                band: band.label ?? band.type,
                 items: band.items?.length ?? 0,
             }))
         );
-        this.snackBar.open(`Template updated: ${template.name}`, 'OK', { duration: 2000 });
+        this.snackBar.open(`Template updated: ${template.meta?.name ?? 'Untitled'}`, 'OK', { duration: 2000 });
     }
 
     onPreviewChange(pages: unknown) {

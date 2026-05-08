@@ -17,6 +17,7 @@ export const routes: Routes = [
             { path: 'toolbar', loadComponent: () => import('./pages/demo/toolbar/toolbar.component').then(m => m.ToolbarComponent) },
             { path: 'business', loadComponent: () => import('./pages/demo/business/business.component').then(m => m.BusinessComponent) },
             { path: 'report-designer', loadComponent: () => import('./pages/demo/report-designer/report-designer.component').then(m => m.ReportDesignerPageComponent) },
+            { path: 'import-export', loadComponent: () => import('./pages/demo/import-export/import-export.component').then(m => m.ImportExportComponent) },
         ]
     },
     { path: '**', redirectTo: 'demo' }
