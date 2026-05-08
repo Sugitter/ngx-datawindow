@@ -1,4 +1,4 @@
-# 更新日志
+﻿# 更新日志
 
 所有 notable 变更都会记录在此文件中。
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)
@@ -7,6 +7,36 @@
 ---
 
 ## [Unreleased]
+
+## [1.0.1] - 2026-05-08
+
+### 修复
+
+- **P0 测试覆盖率** — 修复 datastore-phase1.test.ts 未使用 Jest describe/it 结构，测试从 51 提升至 107
+- **MatTableDataSource 缓存** — 修复 dataSource computed() 每次重建实例导致 mat-sort 排序状态丢失
+- **虚拟滚动排序** — 修复 _syncAllRows() 调用 getRows() 未应用排序规则
+- **Report Designer 编译** — 修复 @switch/@case ICU 消息解析错误，添加 MatCheckboxModule 导入
+- **模板语法错误** — 修复 report-designer-demo 中 json 管道和信号传递问题
+
+### 新增
+
+- **GroupBy 分组 UI** — 工具栏配置 + 普通表/虚拟滚动表分组行渲染
+- **键盘导航** — @HostListener 全局键盘处理，上下/Enter/Tab/Escape
+- **Shift+范围选择** — 基于 _lastRangeSelectId 的多行选择
+- **CSV 导入** — importFromCSV() 方法，支持追加和跳过表头
+- **xlsx 导出** — SheetJS 实现 Excel 导出
+- **导入导出示例页面** — /import-export 演示完整导入导出功能
+
+### 文档
+
+- **API 文档** — typedoc 生成 docs/api/ 完整参考文档
+- **README 更新** — 测试状态从 51/51 更新至 107/107
+
+### 废弃
+
+- **datastore-phase1.test.ts 测试函数** — 已改写为标准 Jest describe/it 结构
+
+---
 
 ## [0.2.0] - 2026-04-26
 
@@ -73,6 +103,7 @@
 
 ---
 
-[Unreleased]: https://github.com/Sugitter/ngx-datawindow/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Sugitter/ngx-datawindow/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/Sugitter/ngx-datawindow/releases/tag/v1.0.1
 [0.2.0]: https://github.com/Sugitter/ngx-datawindow/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Sugitter/ngx-datawindow/releases/tag/v0.1.0
