@@ -118,6 +118,8 @@ export interface TableConfig {
     refresh?: boolean | { icon?: string; label?: string };
     /** 导出按钮 */
     export?: boolean | { icon?: string; label?: string; formats?: string[] };
+    /** 导入按钮 */
+    import?: boolean | { icon?: string; label?: string };
     /** 自定义按钮 */
     custom?: Array<{ id: string; icon?: string; label: string; action: string }>;
   };
@@ -245,6 +247,9 @@ export interface TableState {
 
   /** 全局搜索关键词 */
   globalSearch?: string;
+
+  /** 焦点行 ID */
+  focusedRowId?: number | null;
 
   /** 列过滤条件 */
   columnFilters: Record<string, unknown>;

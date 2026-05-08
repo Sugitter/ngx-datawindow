@@ -35,4 +35,5 @@ export { createRenderer } from './renderer/index';
 
 // ── Report Designer ────────────────────────────────────────────────────────
 // ⚠️ 依赖 Angular Material（需在宿主项目中安装 @angular/material + @angular/cdk）
-export * from './report-designer';
+// TODO: 模板语法问题待修复后重新导出
+// export * from './report-designer';

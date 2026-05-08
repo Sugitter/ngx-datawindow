@@ -1242,6 +1242,7 @@ export class ReportDesignerComponent implements OnInit, OnDestroy {
   // ══════════════════════════════════════════════════════════════
 
   datastore = input<DataStoreImpl | null>(null);
+  templateInput = input<ReportTemplate | null>(null, { alias: 'template' });
 
   templateChange = output<ReportTemplate>();
   previewChange = output<ReportPages | null>();
@@ -1382,6 +1383,11 @@ export class ReportDesignerComponent implements OnInit, OnDestroy {
   private _reportEngine = new ReportEngine();
 
   ngOnInit(): void {
+    // 同步外部 template 输入
+    const tpl = this.templateInput();
+    if (tpl) {
+      this.template.set(tpl);
+    }
     // 监听键盘快捷键
     document.addEventListener('keydown', this._onKeyDown);
   }

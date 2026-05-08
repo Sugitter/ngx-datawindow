@@ -197,7 +197,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
           <span class="dt-groupbar-label">按</span>
           <span class="dt-groupbar-field">{{ getGroupByFieldLabel() }}</span>
           <span class="dt-groupbar-label">分组</span>
-          @if (config().groupBy.collapsed !== undefined) {
+          @if (config().groupBy?.collapsed !== undefined) {
             <button mat-icon-button class="dt-groupbar-collapse-btn"
               (click)="toggleGroupByCollapse()"
               [matTooltip]="isGroupByCollapsed() ? '展开分组' : '折叠分组'">

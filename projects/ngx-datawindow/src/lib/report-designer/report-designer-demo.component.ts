@@ -153,7 +153,7 @@ export class AppComponent &#123;&#125;</pre>
                 <h4>保存模板到后端</h4>
                 <pre class="code-block">// 保存
 const json = JSON.stringify(this.reportTemplate);
-this.http.post('/api/reports', {{ json }}).subscribe();
+this.http.post('/api/reports', json).subscribe();
 
 // 加载
 this.http.get&lt;ReportTemplate&gt;('/api/reports/1')
@@ -240,8 +240,9 @@ const pages = engine.render(template, dataStore);
               </button>
             </div>
             <dw-report-designer
-              [datastore]="dataStore"
-              [(template)]="currentTemplate"
+              [datastore]="dataStore()"
+              [template]="currentTemplate()"
+              (templateChange)="onTemplateChange($event)"
               (templateChange)="onTemplateChange($event)"
               (previewChange)="onPreview($event)"
             />
