@@ -4,7 +4,7 @@
  */
 
 import {
-  Component, Input, Output, EventEmitter, ViewChild, ChangeDetectionStrategy,
+  Component, Input, Output, EventEmitter, ViewChild, ChangeDetectionStrategy, HostListener,
   signal, computed, OnInit, OnDestroy, OnChanges, ChangeDetectorRef,
   ContentChild, TemplateRef, Inject
 } from '@angular/core';
@@ -117,11 +117,34 @@ export interface ToolbarEvent { action: ToolbarAction; }
                 <mat-icon>table_chart</mat-icon>
                 <span>导出 CSV</span>
               </button>
+              <button mat-menu-item (click)="exportData('xlsx')">
+                <mat-icon>insert_drive_file</mat-icon>
+                <span>导出 Excel</span>
+              </button>
               <button mat-menu-item (click)="exportData('json')">
                 <mat-icon>code</mat-icon>
                 <span>导出 JSON</span>
               </button>
             </mat-menu>
+          }
+
+          @if (toolbarActions()?.import !== false) {
+            <button mat-icon-button [matMenuTriggerFor]="importMenu"
+              [disabled]="loading()" matTooltip="导入">
+              <mat-icon>upload</mat-icon>
+            </button>
+            <mat-menu #importMenu="matMenu">
+              <button mat-menu-item (click)="triggerImport('csv')">
+                <mat-icon>table_chart</mat-icon>
+                <span>导入 CSV</span>
+              </button>
+              <button mat-menu-item (click)="triggerImport('xlsx')">
+                <mat-icon>insert_drive_file</mat-icon>
+                <span>导入 Excel</span>
+              </button>
+            </mat-menu>
+            <input type="file" #importFileInput style="display:none"
+              accept=".csv,.xlsx,.xls" (change)="onImportFileSelect($event)" />
           }
 
           @for (btn of toolbarActions()?.custom || []; track btn.id) {
@@ -164,6 +187,28 @@ export interface ToolbarEvent { action: ToolbarAction; }
               </div>
             }
           }
+        </div>
+      }
+
+      <!-- ═══ 行分组（GroupBy）工具栏 ═══ -->
+      @if (config().groupBy && !virtualScrollEnabled()) {
+        <div class="dt-groupbar">
+          <mat-icon class="dt-groupbar-icon">view_group</mat-icon>
+          <span class="dt-groupbar-label">按</span>
+          <span class="dt-groupbar-field">{{ getGroupByFieldLabel() }}</span>
+          <span class="dt-groupbar-label">分组</span>
+          @if (config().groupBy.collapsed !== undefined) {
+            <button mat-icon-button class="dt-groupbar-collapse-btn"
+              (click)="toggleGroupByCollapse()"
+              [matTooltip]="isGroupByCollapsed() ? '展开分组' : '折叠分组'">
+              <mat-icon>{{ isGroupByCollapsed() ? 'expand_more' : 'expand_less' }}</mat-icon>
+            </button>
+          }
+          <span class="dt-toolbar-spacer"></span>
+          <button mat-button class="dt-groupbar-clear-btn" (click)="clearGroupBy()">
+            <mat-icon>close</mat-icon>
+            清除分组
+          </button>
         </div>
       }
 
@@ -361,7 +406,72 @@ export interface ToolbarEvent { action: ToolbarAction; }
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="displayedColumns(); sticky: true"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns()"
+
+          <!-- ═══ 分组行（GroupBy）═════════════════════════════════════════════════ -->
+          @for (grp of groupRows(); track grp.key) {
+            <tr class="dt-group-row"
+              [class.dt-group-row-collapsed]="grp.collapsed"
+              (click)="toggleGroupCollapse(grp.key)">
+              <td [attr.colspan]="displayedColumns().length" class="dt-group-row-cell">
+                <mat-icon class="dt-group-toggle-icon">
+                  {{ grp.collapsed ? 'chevron_right' : 'expand_more' }}
+                </mat-icon>
+                <span class="dt-group-title">
+                  {{ grp.title || grp.key }}
+                </span>
+                <span class="dt-group-count">{{ grp.rows.length }} 条</span>
+                @for (agg of getGroupAggregations(grp); track agg.field) {
+                  <span class="dt-group-agg">
+                    <span class="dt-group-agg-label">{{ agg.label }}:</span>
+                    <span class="dt-group-agg-value">{{ agg.value | number:'1.0-2' }}</span>
+                  </span>
+                }
+              </td>
+            </tr>
+            @if (!grp.collapsed) {
+              @for (row of grp.rows; track row.id) {
+                <tr class="dt-group-child-row"
+                  [class.dt-row-selected]="isRowSelected(row.id)"
+                  [class.dt-row-new]="row.status === 'new'"
+                  [class.dt-row-modified]="row.status === 'modified'"
+                  [class.dt-row-deleted]="row.status === 'deleted'"
+                  [class.dt-clickable]="config().rowClick || true"
+                  (click)="onRowClick(row, $event)"
+                  (dblclick)="onRowDoubleClick(row, $event)">
+                  @if (selectionMode() !== 'none') {
+                    <td style="width:48px;min-width:48px;text-align:center;padding:0 8px;border-right:1px solid var(--dt-grid-color);">
+                      <mat-checkbox [checked]="isRowSelected(row.id)"
+                        (change)="toggleRowSelect(row.id, $event.checked)"
+                        (click)="$event.stopPropagation()">
+                      </mat-checkbox>
+                    </td>
+                  }
+                  @for (col of visibleColumns(); track col.field) {
+                    <td class="dt-group-child-cell"
+                      [style.textAlign]="col.align || 'left'"
+                      [style.width]="col.width || 'auto'"
+                      [style.minWidth]="col.minWidth || '60px'"
+                      [class.dt-cell-highlight]="isCellHighlighted(row.id, col.field)">
+                      {{ formatCell(row, col) }}
+                    </td>
+                  }
+                  <td style="width:120px;min-width:120px;text-align:center;padding:0 8px;">
+                    <button mat-icon-button matTooltip="编辑" (click)="editRow(row); $event.stopPropagation()">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" matTooltip="删除"
+                      (click)="deleteRow(row.id); $event.stopPropagation()">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </td>
+                </tr>
+              }
+            }
+          }
+
+          <!-- 数据行（非分组模式下） -->
+          @if (!config().groupBy) {
+            <tr mat-row *matRowDef="let row; columns: displayedColumns()"
             [class.dt-row-selected]="isRowSelected(row.id)"
             [class.dt-row-new]="row.status === 'new'"
             [class.dt-row-modified]="row.status === 'modified'"
@@ -370,6 +480,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
             (click)="onRowClick(row, $event)"
             (dblclick)="onRowDoubleClick(row, $event)">
           </tr>
+          }
 
           <!-- 空状态 -->
           <tr class="mat-row" *matNoDataRow>
@@ -825,6 +936,71 @@ export interface ToolbarEvent { action: ToolbarAction; }
 
     .dt-loading .dt-table-wrapper { filter: blur(1px); pointer-events: none; }
 
+    /* ═══ 分组行样式 ═══ */
+    .dt-groupbar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: #f0f4ff;
+      border-bottom: 1px solid var(--dt-grid-color);
+      font-size: 13px;
+    }
+    .dt-groupbar-icon { font-size: 16px; color: #1565c0; }
+    .dt-groupbar-field { font-weight: 600; color: #1565c0; }
+    .dt-groupbar-label { color: #666; }
+    .dt-groupbar-collapse-btn { width: 24px; height: 24px; line-height: 24px; }
+    .dt-groupbar-clear-btn { font-size: 12px; color: #999; }
+
+    /* 分组 header 行 */
+    .dt-group-row {
+      cursor: pointer;
+      background: #e3f0ff !important;
+      border-bottom: 1px solid #bbdefb !important;
+    }
+    .dt-group-row:hover { background: #d0e8ff !important; }
+    .dt-group-row td { padding: 5px 8px !important; font-size: 13px; }
+    .dt-group-toggle-icon {
+      font-size: 18px;
+      vertical-align: middle;
+      color: #1976d2;
+      margin-right: 4px;
+    }
+    .dt-group-title {
+      font-weight: 600;
+      color: #0d47a1;
+      margin-right: 8px;
+    }
+    .dt-group-count {
+      color: #666;
+      font-size: 12px;
+      margin-right: 12px;
+    }
+    .dt-group-agg {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      margin-left: 12px;
+      font-size: 12px;
+    }
+    .dt-group-agg-label { color: #888; }
+    .dt-group-agg-value { font-weight: 600; color: #1565c0; }
+
+    /* 分组子行 — 用普通 tr 而非 mat-row 以避免 mat-sort 干扰 */
+    .dt-group-child-row {
+      height: var(--dt-row-height) !important;
+      border-bottom: 1px solid var(--dt-grid-color);
+    }
+    .dt-group-child-row:hover { background: #f5f5f5; }
+    .dt-group-child-row td {
+      padding: 0 8px !important;
+      font-size: var(--dt-font-size);
+      border-right: 1px solid var(--dt-grid-color);
+      height: var(--dt-row-height);
+      vertical-align: middle;
+    }
+    .dt-group-child-row td:last-child { border-right: none; }
+
     /* Material 分页器覆盖 */
     ::ng-deep .dt-paginator-wrapper .mat-mdc-paginator {
       background: #fafafa;
@@ -913,6 +1089,8 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
   private _initialized = false;
   private _dataFeedSub: Subscription | null = null;
   private _highlightCells = signal<Map<string, HighlightCell>>(new Map());
+  private _collapsedGroups = signal<Set<string>>(new Set());
+  private _lastRangeSelectId: number | null = null;
 
   @Input() set datastoreConfig(v: DataStoreConfig) {
     this._datastoreConfig = v;
@@ -1095,6 +1273,103 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     return this._allRows().map(r => ({ ...r.raw, _id: r.id, _status: r.status } as any));
   });
 
+  // ── GroupBy ──────────────────────────────────────────────────────────────
+
+  /** 分组行（用于普通分页模式） */
+  readonly groupRows = computed(() => {
+    const cfg = this._tableConfig?.groupBy;
+    if (!cfg || this._virtualScrollEnabled()) return [];
+
+    const field = cfg.field;
+    const collapsed = this._collapsedGroups();
+    const allRows = this._service!.rows().rows;
+
+    // 按分组字段聚合
+    const map = new Map<string, DataRow[]>();
+    for (const row of allRows) {
+      const key = String(row.raw[field] ?? '(null)');
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(row);
+    }
+
+    const titleTemplate = cfg.titleTemplate;
+    return Array.from(map.entries()).map(([key, rows]) => {
+      const isCollapsed = collapsed.has(key) || (cfg.collapsed && !collapsed.size);
+      return {
+        key,
+        title: titleTemplate ? titleTemplate(key, rows.length) : key,
+        rows,
+        collapsed: isCollapsed,
+      };
+    });
+  });
+
+  trackGroupByKey(_index: number, grp: { key: string }): string {
+    return grp.key;
+  }
+
+  getGroupByFieldLabel(): string {
+    const field = this._tableConfig?.groupBy?.field;
+    if (!field) return field ?? '';
+    const col = this._columns.find(c => c.field === field);
+    return col?.header ?? field;
+  }
+
+  isGroupByCollapsed(): boolean {
+    const collapsed = this._collapsedGroups();
+    const cfg = this._tableConfig?.groupBy;
+    if (!cfg) return false;
+    // 当所有组都被折叠时，groupByCollapsed 信号返回 true
+    const allKeys = Array.from(this.groupRows().map(g => g.key));
+    return allKeys.every(k => collapsed.has(k));
+  }
+
+  toggleGroupByCollapse(): void {
+    const collapsed = this._collapsedGroups();
+    const allKeys = Array.from(this.groupRows().map(g => g.key));
+    const allCollapsed = allKeys.every(k => collapsed.has(k));
+    if (allCollapsed) {
+      this._collapsedGroups.set(new Set());
+    } else {
+      this._collapsedGroups.set(new Set(allKeys));
+    }
+  }
+
+  toggleGroupCollapse(key: string): void {
+    this._collapsedGroups.update(s => {
+      const next = new Set(s);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
+
+  clearGroupBy(): void {
+    this._collapsedGroups.set(new Set());
+    this._tableConfig = { ...this._tableConfig, groupBy: undefined };
+  }
+
+  getGroupAggregations(grp: { key: string; rows: DataRow[] }): Array<{ field: string; label: string; value: number }> {
+    const result: Array<{ field: string; label: string; value: number }> = [];
+    const cols = this._columns;
+    for (const col of cols) {
+      if (!col.aggregate) continue;
+      const nums = grp.rows
+        .map(r => r.raw[col.field])
+        .filter((v): v is number => typeof v === 'number' && !isNaN(v));
+      if (!nums.length) continue;
+      let value = 0;
+      switch (col.aggregate.type) {
+        case 'sum':   value = nums.reduce((a, b) => a + b, 0); break;
+        case 'avg':   value = nums.reduce((a, b) => a + b, 0) / nums.length; break;
+        case 'count': value = nums.length; break;
+        case 'min':   value = Math.min(...nums); break;
+        case 'max':   value = Math.max(...nums); break;
+      }
+      result.push({ field: col.field, label: col.aggregate.type, value });
+    }
+    return result;
+  }
+
   // ── 生命周期 ───────────────────────────────────────────────────────────────
 
   ngOnInit(): void {
@@ -1135,6 +1410,114 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
         this.scrollStrategy.setDataLength(result.total);
       }
     }
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // 键盘导航
+  // 目标：ArrowUp/Down 移动焦点行，Enter 编辑，Tab 切换字段，Ctrl+A 全选
+  // ════════════════════════════════════════════════════════════════════════════
+
+  /** @HostListener 由 Component 直接装饰，无需在 ngInit 中注册 */
+  @HostListener('keydown', ['$event'])
+  onKeyDown(event: KeyboardEvent): void {
+    // 仅在启用键盘导航时处理
+    if (this._tableConfig?.keyboardNavigation === false) return;
+
+    const allRows = this._allRows();
+    const focusedRow = this._service!.state().focusedRowId ?? (allRows.length ? allRows[0].id : null);
+    if (focusedRow === null) return;
+
+    switch (event.key) {
+      case 'ArrowUp':
+        event.preventDefault();
+        this._navigateRow(focusedRow, 'up', allRows);
+        break;
+      case 'ArrowDown':
+        event.preventDefault();
+        this._navigateRow(focusedRow, 'down', allRows);
+        break;
+      case 'Enter':
+        event.preventDefault();
+        if (this._editingCell()) {
+          this.saveEdit(focusedRow, this._editingCell()!.field);
+        } else {
+          this._beginEditFocusedRow(focusedRow);
+        }
+        break;
+      case 'Escape':
+        if (this._editingCell()) { this.cancelEdit(); }
+        break;
+      case 'Tab':
+        event.preventDefault();
+        this._tabField(event.shiftKey ? 'prev' : 'next');
+        break;
+      case 'a':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          allRows.forEach(r => this._service!.selectRow(r.id, true));
+        }
+        break;
+    }
+  }
+
+  private _navigateRow(currentId: number, dir: 'up' | 'down', allRows: DataRow[]): void {
+    const idx = allRows.findIndex(r => r.id === currentId);
+    const next = dir === 'down'
+      ? Math.min(idx + 1, allRows.length - 1)
+      : Math.max(idx - 1, 0);
+    if (next !== idx && allRows[next]) {
+      this._service!.getDataStore().setFocusedRow(allRows[next].id);
+    }
+  }
+
+  private _beginEditFocusedRow(rowId: number): void {
+    const col = this._columns.find(c => c.editable);
+    if (!col) return;
+    const row = this._service!.getDataStore().getRowById(rowId);
+    this.startEdit(rowId, col.field, row?.raw[col.field]);
+  }
+
+  private _tabField(dir: 'next' | 'prev'): void {
+    const editing = this._editingCell();
+    if (!editing) return;
+    const editableCols = this._columns.filter(c => c.editable);
+    const idx = editableCols.findIndex(c => c.field === editing.field);
+    const nextIdx = dir === 'next'
+      ? (idx + 1) % editableCols.length
+      : (idx - 1 + editableCols.length) % editableCols.length;
+    if (editableCols[nextIdx] && editing) {
+      const row = this._service!.getDataStore().getRowById(editing.rowId);
+      this.startEdit(editing.rowId, editableCols[nextIdx].field,
+        row?.raw[editableCols[nextIdx].field]);
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // Shift+点击 范围选择
+  // ════════════════════════════════════════════════════════════════════════════
+
+  private _rangeAnchor: number | null = null;
+
+  handleShiftClick(rowId: number): void {
+    const enabled = this._tableConfig?.rangeSelect;
+    if (!enabled) return;
+
+    if (this._rangeAnchor === null) {
+      this._rangeAnchor = rowId;
+      this._service!.selectRow(rowId, true);
+      return;
+    }
+
+    const allRows = this._allRows();
+    const startIdx = allRows.findIndex(r => r.id === this._rangeAnchor);
+    const endIdx = allRows.findIndex(r => r.id === rowId);
+    if (startIdx === -1 || endIdx === -1) return;
+
+    const [from, to] = startIdx < endIdx ? [startIdx, endIdx] : [endIdx, startIdx];
+    for (let i = from; i <= to; i++) {
+      this._service!.selectRow(allRows[i].id, true);
+    }
+    this._rangeAnchor = rowId;
   }
 
   // ── 实时数据订阅 ─────────────────────────────────────────────────────────
@@ -1439,9 +1822,14 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     }
     // 单击行选中/取消选中
     if (this.selectionMode() !== 'none') {
-      const currentSelected = this._service!.isSelected(rowId);
-      this._service!.selectRow(rowId, !currentSelected);
-      this.selectionChanged.emit(this._service!.state().selectedRows);
+      // Shift+点击：范围选择
+      if (event.shiftKey && this._tableConfig?.rangeSelect) {
+        this.handleShiftClick(rowId);
+      } else {
+        const currentSelected = this._service!.isSelected(rowId);
+        this._service!.selectRow(rowId, !currentSelected);
+        this.selectionChanged.emit(this._service!.state().selectedRows);
+      }
     }
   }
 
@@ -1505,20 +1893,64 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     return this._sanitizer.bypassSecurityTrustHtml(html);
   }
 
-  // ── 导出 ──────────────────────────────────────────────────────────────────
+  // ── 导出 ═════════════════════════════════════════════════════════════════
 
-  exportData(format: 'csv' | 'json'): void {
+  async exportData(format: 'csv' | 'json' | 'xlsx'): Promise<void> {
     if (format === 'csv') {
       const csv = this._service!.exportToCSV({ format: 'csv' });
       this._downloadFile(csv, 'export.csv', 'text/csv');
+    } else if (format === 'xlsx') {
+      const blob = await this._service!.exportToXLSX({ format: 'xlsx' });
+      this._downloadBlob(blob, 'export.xlsx');
     } else {
       const json = this._service!.exportToJSON({ format: 'json' });
       this._downloadFile(json, 'export.json', 'application/json');
     }
   }
 
+  // ── 导入 ══════════════════════════════════════════════════════════════════
+
+  private _importFormat: 'csv' | 'xlsx' = 'csv';
+
+  triggerImport(format: 'csv' | 'xlsx'): void {
+    this._importFormat = format;
+    const input = document.querySelector('#importFileInput') as HTMLInputElement;
+    if (input) {
+      input.accept = format === 'csv' ? '.csv' : '.xlsx,.xls';
+      input.click();
+    }
+  }
+
+  async onImportFileSelect(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    try {
+      let count = 0;
+      if (this._importFormat === 'csv') {
+        const text = await file.text();
+        count = this._service!.importFromCSV(text);
+      } else {
+        count = await this._service!.importFromXLSX(file);
+      }
+      console.log(`成功导入 ${count} 条数据`);
+    } catch (err) {
+      console.error('导入失败:', err);
+    } finally {
+      input.value = '';
+      if (this._virtualScrollEnabled()) {
+        this._syncAllRows();
+      }
+    }
+  }
+
   private _downloadFile(content: string, filename: string, mimeType: string): void {
     const blob = new Blob([content], { type: mimeType });
+    this._downloadBlob(blob, filename);
+  }
+
+  private _downloadBlob(blob: Blob, filename: string): void {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

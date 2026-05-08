@@ -131,6 +131,9 @@ export interface TableConfig {
   /** 多选模式下是否启用范围选择（Shift+点击选中两个行之间的所有行）*/
   rangeSelect?: boolean;
 
+  /** 是否启用键盘导航（ArrowUp/Down 移动焦点，Enter 编辑，Tab 切换字段，Ctrl+A 全选），默认 true */
+  keyboardNavigation?: boolean;
+
   /** 行分组配置（按字段分组显示） */
   groupBy?: {
     /** 分组字段 */

@@ -376,6 +376,159 @@ export class DataTableService {
       : { data, total: result.total, exportedAt: new Date().toISOString() }, null, 2);
   }
 
+  /** 导出为 Excel (xlsx) 格式 — 使用 SheetJS */
+  async exportToXLSX(config: ExportConfig = { format: 'xlsx' }): Promise<Blob> {
+    // 动态加载 xlsx 库（避免首屏体积）
+    const XLSX = await import('xlsx');
+
+    const opts: QueryOptions = {};
+    if (config.exportSelectedOnly) {
+      const ids = this._state().selectedRows;
+      opts.filter = {
+        children: [...ids].map(id => ({ field: 'id', operator: 'eq', value: id })),
+        connector: 'or',
+      } as FilterCondition;
+    }
+    const result = this._ds.query(opts);
+    const cols = this._columns.filter(c => c.visible !== false);
+
+    // 构造数据数组
+    const data = result.rows.map(row => {
+      const obj: Record<string, unknown> = {};
+      for (const c of cols) {
+        const v = row.raw[c.field];
+        obj[c.header] = c.format ? c.format(v as any, row.raw as any) : v;
+      }
+      return obj;
+    });
+
+    // 创建工作簿和工作表
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, config.sheetName || 'Sheet1');
+
+    // 生成二进制数据
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    return new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+
+  /** 从 CSV 文本导入数据 */
+  importFromCSV(csvText: string, options: { append?: boolean; skipHeader?: boolean } = {}): number {
+    const lines = csvText.split(/\r?\n/).filter(line => line.trim());
+    if (lines.length === 0) return 0;
+
+    const cols = this._columns.filter(c => c.visible !== false);
+    const headerLine = options.skipHeader ? null : lines[0];
+    const dataLines = options.skipHeader ? lines : lines.slice(1);
+
+    // 解析 header
+    let headers: string[] = [];
+    if (headerLine) {
+      headers = this._parseCSVLine(headerLine).map(h => h.trim());
+    } else {
+      headers = cols.map(c => c.field);
+    }
+
+    // 字段名映射：header → field
+    const headerToField = new Map<string, string>();
+    for (const col of cols) {
+      headerToField.set(col.header, col.field);
+      headerToField.set(col.field, col.field);
+    }
+
+    // 解析数据行
+    const newData: Record<string, RawValue>[] = [];
+    for (const line of dataLines) {
+      if (!line.trim()) continue;
+      const values = this._parseCSVLine(line);
+      const row: Record<string, RawValue> = {};
+      for (let i = 0; i < headers.length && i < values.length; i++) {
+        const field = headerToField.get(headers[i]) || headers[i];
+        row[field] = this._parseValue(values[i]);
+      }
+      newData.push(row);
+    }
+
+    // 写入 DataStore
+    if (options.append) {
+      const existing = this._ds.getRows().map(r => r.raw);
+      this._ds.setData([...existing, ...newData]);
+    } else {
+      this._ds.setData(newData);
+    }
+
+    return newData.length;
+  }
+
+  /** 从 Excel 文件导入 */
+  async importFromXLSX(file: File, options: { sheetIndex?: number; append?: boolean } = {}): Promise<number> {
+    const XLSX = await import('xlsx');
+    const data = await file.arrayBuffer();
+    const wb = XLSX.read(data, { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[options.sheetIndex || 0]];
+    const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: '' });
+
+    const cols = this._columns.filter(c => c.visible !== false);
+    const headerToField = new Map<string, string>();
+    for (const col of cols) {
+      headerToField.set(col.header, col.field);
+      headerToField.set(col.field, col.field);
+    }
+
+    const newData: Record<string, RawValue>[] = jsonData.map(row => {
+      const mapped: Record<string, RawValue> = {};
+      for (const [key, value] of Object.entries(row)) {
+        const field = headerToField.get(key) || key;
+        mapped[field] = value as RawValue;
+      }
+      return mapped;
+    });
+
+    if (options.append) {
+      const existing = this._ds.getRows().map(r => r.raw);
+      this._ds.setData([...existing, ...newData]);
+    } else {
+      this._ds.setData(newData);
+    }
+
+    return newData.length;
+  }
+
+  private _parseCSVLine(line: string): string[] {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"' && !inQuotes) {
+        inQuotes = true;
+      } else if (char === '"' && inQuotes) {
+        if (line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current);
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current);
+    return result;
+  }
+
+  private _parseValue(value: string): RawValue {
+    if (value === '' || value === 'null') return null;
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    const num = Number(value);
+    if (!isNaN(num)) return num;
+    return value;
+  }
+
   // ── 数据操作 ──────────────────────────────────────────────────────────────
 
   setData(data: Record<string, RawValue>[]): void {
