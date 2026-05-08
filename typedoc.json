@@ -1,4 +1,4 @@
-{
+﻿{
   "$schema": "https://typedoc.org/schema.json",
   "entryPoint": "projects/ngx-datawindow/src/public-api.ts",
   "out": "docs/api",
@@ -8,7 +8,7 @@
   "disableSources": false,
   "readme": "README.md",
   "navigationLinks": {
-    "GitHub": "https://github.com/your-org/ngx-datawindow"
+    "GitHub": "https://github.com/Sugitter/ngx-datawindow"
   },
   "skipErrorChecking": true
 }
