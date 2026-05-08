@@ -558,7 +558,7 @@ export class ReportEngine {
       },
     };
 
-    const base = template.styles?.[item.style ?? 'default'] ?? {};
+    const base = (template.styles?.[item.style ?? 'default'] ?? {}) as Partial<ResolvedStyle>;
 
     return {
       ...defaults,

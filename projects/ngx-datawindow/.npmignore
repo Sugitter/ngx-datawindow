@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.angular/
+.vscode/
+*.log
+.DS_Store
+Thumbs.db
+*.ts
+!*.d.ts
+src/
+test/
+*.spec.ts
+./
+../*

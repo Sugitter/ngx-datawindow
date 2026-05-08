@@ -1,7 +1,20 @@
 {
   "name": "ngx-datawindow",
   "version": "1.0.1",
-  "description": "Angular DataWindow component inspired by PowerBuilder DataWindow",
+  "description": "Angular DataWindow component inspired by PowerBuilder DataWindow — DataStore engine, virtual computed columns, column-level change tracking, offline persistence, and optimistic locking.",
+  "keywords": [
+    "angular",
+    "datawindow",
+    "datagrid",
+    "datatable",
+    "crud",
+    "virtual-scroll",
+    "offline",
+    "powerbuilder",
+    "change-tracking"
+  ],
+  "license": "MIT",
+  "author": "ngx-datawindow team <https://github.com/sugitter/ngx-datawindow>",
   "repository": {
     "type": "git",
     "url": "https://github.com/sugitter/ngx-datawindow.git"
