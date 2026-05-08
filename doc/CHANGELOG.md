@@ -8,6 +8,49 @@
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-05-08
+
+### 修复
+
+- **Report Designer 编译错误** — 修复 @switch/@case ICU 消息解析错误，添加 MatCheckboxModule 导入
+- **模板语法错误** — 修复 report-designer-demo 中 json 管道和信号传递问题
+- **report-engine 类型错误** — 修复 _resolveStyle() 返回类型推断问题
+
+### 新增
+
+- **GroupBy 分组 UI** — 工具栏配置 + 普通表/虚拟滚动表分组行渲染
+- **键盘导航** — @HostListener 全局键盘处理，上下/Enter/Tab/Escape
+- **Shift+范围选择** — 基于 _lastRangeSelectId 的多行选择
+- **CSV 导入** — importFromCSV() 方法，支持追加和跳过表头
+- **xlsx 导出** — SheetJS 实现 Excel 导出
+- **导入导出示例页面** — /import-export 演示完整导入导出功能
+- **API 文档** — typedoc 生成 docs/api/ 完整参考文档
+
+### 文档
+
+- **README 更新** — 测试状态从 51/51 更新至 107/107
+
+---
+
+## [1.1.1] - 2026-05-06
+
+### 修复
+
+- **版本标签同步** — 修复本地版本与 git tag 不一致问题
+
+---
+
+## [1.1.0] - 2026-05-05
+
+### 新增
+
+- **实时数据接入** — WebSocket / SSE / Observable 实时数据推送
+- **新数据闪烁提示** — 高亮变化行 500ms 后恢复
+- **Binance WebSocket 示例** — 加密货币行情实时展示
+- **OKX WebSocket 示例** — 多币种对比展示
+
+---
+
 ## [1.0.1] - 2026-05-08
 
 ### 修复
@@ -103,7 +146,10 @@
 
 ---
 
-[Unreleased]: https://github.com/Sugitter/ngx-datawindow/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/Sugitter/ngx-datawindow/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/Sugitter/ngx-datawindow/releases/tag/v1.1.2
+[1.1.1]: https://github.com/Sugitter/ngx-datawindow/releases/tag/v1.1.1
+[1.1.0]: https://github.com/Sugitter/ngx-datawindow/releases/tag/v1.1.0
 [1.0.1]: https://github.com/Sugitter/ngx-datawindow/releases/tag/v1.0.1
 [0.2.0]: https://github.com/Sugitter/ngx-datawindow/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Sugitter/ngx-datawindow/releases/tag/v0.1.0
