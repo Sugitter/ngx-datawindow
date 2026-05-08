@@ -1,0 +1,19 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": [
+    "projects/ngx-datawindow/src/lib/datatable.component.ts",
+    "projects/ngx-datawindow/src/lib/datatable.service.ts",
+    "projects/ngx-datawindow/src/lib/datastore.ts",
+    "projects/ngx-datawindow/src/lib/models.ts"
+  ],
+  "out": "docs/api",
+  "name": "ngx-datawindow",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "disableSources": false,
+  "theme": "default",
+  "navigationLinks": {
+    "GitHub": "https://github.com/your-org/ngx-datawindow"
+  },
+  "skipErrorChecking": true
+}

@@ -65,6 +65,10 @@ import { RouterModule, RouterOutlet } from '@angular/router';
                         <mat-icon matListItemIcon>build</mat-icon>
                         <span matListItemTitle>Toolbar</span>
                     </a>
+                    <a mat-list-item routerLink="/demo/report-designer" routerLinkActive="active">
+                        <mat-icon matListItemIcon>design_services</mat-icon>
+                        <span matListItemTitle>Report Designer</span>
+                    </a>
                     <mat-divider></mat-divider>
                     <a mat-list-item routerLink="/demo/business" routerLinkActive="active" class="business-link">
                         <mat-icon matListItemIcon>business_center</mat-icon>
