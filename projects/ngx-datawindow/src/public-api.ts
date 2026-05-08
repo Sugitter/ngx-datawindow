@@ -46,25 +46,31 @@ export {
   type OfflineServiceEvents, type SyncResult
 } from './lib/offline';
 
-// Report Designer - 暂时禁用（模板语法问题待修复）
-// export {
-//   ReportDesignerComponent,
-//   ReportDesignerDemoComponent,
-//   ReportTemplate,
-//   ReportBand,
-//   ReportItem,
-//   ReportItemType,
-//   ReportStyle,
-//   ReportGroup,
-//   ReportParameter,
-//   ReportSort,
-//   TableColumn,
-//   createEmptyTemplate,
-//   fieldsFromColumns,
-//   ExpressionEvaluator,
-//   expressionEvaluator,
-//   EvalContext,
-//   ReportEngine,
-//   ReportPages,
-//   ReportPage,
-// } from './lib/report-designer';
+// Report Designer
+export {
+  ReportDesignerComponent,
+  ReportDesignerDemoComponent,
+  ReportTemplate,
+  ReportBand,
+  ReportItem,
+  ReportItemType,
+  ReportStyle,
+  ReportGroup,
+  ReportParameter,
+  ReportSort,
+  TableColumn,
+  createEmptyTemplate,
+  fieldsFromColumns,
+  ExpressionEvaluator,
+  expressionEvaluator,
+  EvalContext,
+  ReportEngine,
+  ReportPages,
+  ReportPage,
+  ReportSection,
+  ReportRow,
+  ReportCell,
+  ResolvedStyle,
+  RenderContext,
+  BandContext,
+} from './lib/report-designer';

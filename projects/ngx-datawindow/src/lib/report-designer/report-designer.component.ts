@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 报表设计器组件 — ngx-datawindow Report Designer
  *
  * 功能：
@@ -29,6 +29,8 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 
 import {
   ReportTemplate, ReportBand, ReportItem, ReportStyle,
@@ -64,6 +66,7 @@ interface CanvasItem extends ReportItem {
     MatToolbarModule, MatButtonModule, MatIconModule,
     MatSelectModule, MatInputModule, MatFormFieldModule,
     MatTabsModule, MatTooltipModule, MatDialogModule, MatSnackBarModule,
+    MatDividerModule, MatCheckboxModule,
   ],
   template: `
     <div class="designer-root">
@@ -357,288 +360,154 @@ interface CanvasItem extends ReportItem {
                     </div>
 
                     <!-- 类型特定属性 -->
-                    @switch (item.type) {
-                      @case ('text') {
-                        <div class="prop-section">
-                          <div class="prop-section-title">文本内容</div>
-                          <textarea class="prop-textarea"
-                                    [(ngModel)]="item.config['text']"
-                                    placeholder="输入静态文本..."
-                                    rows="3"></textarea>
-
-                          <div class="prop-row">
-                            <label>字号</label>
-                            <input class="prop-input small" type="number"
-                                   [(ngModel)]="item.config['fontSize']"
-                                   placeholder="12" />
-                          </div>
-                          <div class="prop-row">
-                            <label>字重</label>
-                            <select class="prop-select" [(ngModel)]="item.config['fontWeight']">
-                              <option value="normal">正常</option>
-                              <option value="bold">粗体</option>
-                            </select>
-                          </div>
-                          <div class="prop-row">
-                            <label>对齐</label>
-                            <div class="align-buttons">
-                              @for (a of alignOptions; track a.value) {
-                                <button class="align-btn"
-                                        [class.active]="item.config['align'] === a.value"
-                                        (click)="item.config['align'] = a.value">
-                                  <mat-icon>{{ a.icon }}</mat-icon>
-                                </button>
-                              }
-                            </div>
-                          </div>
+                    @if (item.type === 'text') {
+                      <div class="prop-section">
+                        <div class="prop-section-title">文本内容</div>
+                        <textarea class="prop-textarea"
+                                  [(ngModel)]="$any(item.config)['text']"
+                                  placeholder="输入静态文本..."
+                                  rows="3"></textarea>
+                        <div class="prop-row">
+                          <label>字号</label>
+                          <input class="prop-input small" type="number"
+                                 [(ngModel)]="$any(item.config)['fontSize']" placeholder="12" />
                         </div>
-                      }
-
-                      @case ('field') {
-                        <div class="prop-section">
-                          <div class="prop-section-title">数据绑定</div>
-                          <div class="prop-row">
-                            <label>字段</label>
-                            <select class="prop-select" [(ngModel)]="item.config['field']">
-                              <option value="">-- 选择字段 --</option>
-                              @for (f of fields(); track f.name) {
-                                <option [value]="f.name">{{ f.label ?? f.name }}</option>
-                              }
-                            </select>
-                          </div>
-                          <div class="prop-row">
-                            <label>格式</label>
-                            <input class="prop-input" [(ngModel)]="item.config['format']"
-                                   placeholder="如 #,##0.00" />
-                          </div>
-                          <div class="prop-row">
-                            <label>空值文本</label>
-                            <input class="prop-input" [(ngModel)]="item.config['nullText']"
-                                   placeholder="空值显示..." />
-                          </div>
-                          <div class="prop-row">
-                            <label>对齐</label>
-                            <select class="prop-select" [(ngModel)]="item.config['align']">
-                              <option value="left">左对齐</option>
-                              <option value="center">居中</option>
-                              <option value="right">右对齐</option>
-                            </select>
-                          </div>
+                        <div class="prop-row">
+                          <label>字重</label>
+                          <select class="prop-select" [(ngModel)]="$any(item.config)['fontWeight']">
+                            <option value="normal">正常</option>
+                            <option value="bold">粗体</option>
+                          </select>
                         </div>
-                      }
-
-                      @case ('computed') {
-                        <div class="prop-section">
-                          <div class="prop-section-title">计算表达式</div>
-                          <textarea class="prop-textarea mono"
-                                    [(ngModel)]="item.config['expression']"
-                                    placeholder="{field1 + field2} 或 {SUM(sales)}"
-                                    rows="3"></textarea>
-                          <div class="expr-hint">
-                            支持表达式：{field}、{SUM(x)}、{IIF(x>0,'+','-')}
-                          </div>
-                          <div class="prop-row">
-                            <label>数据类型</label>
-                            <select class="prop-select" [(ngModel)]="item.config['dataType']">
-                              <option value="string">文本</option>
-                              <option value="number">数字</option>
-                              <option value="currency">货币</option>
-                              <option value="date">日期</option>
-                            </select>
-                          </div>
-                          <div class="prop-row">
-                            <label>格式</label>
-                            <input class="prop-input" [(ngModel)]="item.config['format']"
-                                   placeholder="如 ¥#,##0.00" />
-                          </div>
+                      </div>
+                    } @else if (item.type === 'field') {
+                      <div class="prop-section">
+                        <div class="prop-section-title">数据绑定</div>
+                        <div class="prop-row">
+                          <label>字段</label>
+                          <select class="prop-select" [(ngModel)]="$any(item.config)['field']">
+                            <option value="">-- 选择字段 --</option>
+                            @for (f of fields(); track f.name) {
+                              <option [value]="f.name">{{ f.label ?? f.name }}</option>
+                            }
+                          </select>
                         </div>
-                      }
-
-                      @case ('image') {
-                        <div class="prop-section">
-                          <div class="prop-section-title">图片属性</div>
-                          <div class="prop-row">
-                            <label>图片来源</label>
-                            <select class="prop-select" [(ngModel)]="item.config['source']">
-                              <option value="url">URL</option>
-                              <option value="base64">Base64</option>
-                              <option value="field">数据字段</option>
-                              <option value="embedded">内嵌</option>
-                            </select>
-                          </div>
-                          @if (item.config['source'] === 'url') {
-                            <div class="prop-row">
-                              <label>图片地址</label>
-                              <input class="prop-input" [(ngModel)]="item.config['url']"
-                                     placeholder="https://..." />
-                            </div>
-                          }
-                          @if (item.config['source'] === 'field') {
-                            <div class="prop-row">
-                              <label>绑定字段</label>
-                              <select class="prop-select" [(ngModel)]="item.config['field']">
-                                <option value="">-- 选择字段 --</option>
-                                @for (f of fields(); track f.name) {
-                                  <option [value]="f.name">{{ f.label ?? f.name }}</option>
-                                }
-                              </select>
-                            </div>
-                          }
-                          <div class="prop-row">
-                            <label>适应方式</label>
-                            <select class="prop-select" [(ngModel)]="item.config['fit']">
-                              <option value="contain">完整显示</option>
-                              <option value="cover">填充</option>
-                              <option value="fill">拉伸</option>
-                              <option value="none">原始大小</option>
-                            </select>
-                          </div>
+                        <div class="prop-row">
+                          <label>格式</label>
+                          <input class="prop-input" [(ngModel)]="$any(item.config)['format']" placeholder="如 #,##0.00" />
                         </div>
-                      }
-
-                      @case ('line') {
-                        <div class="prop-section">
-                          <div class="prop-section-title">线条属性</div>
-                          <div class="prop-row">
-                            <label>方向</label>
-                            <select class="prop-select" [(ngModel)]="item.config['direction']">
-                              <option value="horizontal">水平</option>
-                              <option value="vertical">垂直</option>
-                            </select>
-                          </div>
-                          <div class="prop-row">
-                            <label>线宽</label>
-                            <input class="prop-input small" type="number"
-                                   [(ngModel)]="item.config['thickness']" />
-                          </div>
-                          <div class="prop-row">
-                            <label>样式</label>
-                            <select class="prop-select" [(ngModel)]="item.config['style']">
-                              <option value="solid">实线</option>
-                              <option value="dashed">虚线</option>
-                              <option value="dotted">点线</option>
-                            </select>
-                          </div>
-                          <div class="prop-row">
-                            <label>颜色</label>
-                            <input class="prop-input" type="color"
-                                   [(ngModel)]="item.config['color']" />
-                          </div>
+                      </div>
+                    } @else if (item.type === 'computed') {
+                      <div class="prop-section">
+                        <div class="prop-section-title">计算表达式</div>
+                        <textarea class="prop-textarea mono"
+                                  [(ngModel)]="$any(item.config)['expression']"
+                                  placeholder="{field1 + field2} 或 {SUM(sales)}"
+                                  rows="3"></textarea>
+                        <div class="prop-row">
+                          <label>数据类型</label>
+                          <select class="prop-select" [(ngModel)]="$any(item.config)['dataType']">
+                            <option value="string">文本</option>
+                            <option value="number">数字</option>
+                            <option value="currency">货币</option>
+                            <option value="date">日期</option>
+                          </select>
                         </div>
-                      }
-
-                      @case ('rectangle') {
-                        <div class="prop-section">
-                          <div class="prop-section-title">矩形属性</div>
-                          <div class="prop-row">
-                            <label>填充色</label>
-                            <input class="prop-input" type="color"
-                                   [(ngModel)]="item.config['fill']" />
-                          </div>
-                          <div class="prop-row">
-                            <label>边框宽</label>
-                            <input class="prop-input small" type="number"
-                                   [(ngModel)]="item.config['border']['width']" />
-                          </div>
-                          <div class="prop-row">
-                            <label>边框色</label>
-                            <input class="prop-input" type="color"
-                                   [(ngModel)]="item.config['border']['color']" />
-                          </div>
-                          <div class="prop-row">
-                            <label>圆角</label>
-                            <input class="prop-input small" type="number"
-                                   [(ngModel)]="item.config['border']['radius']" />
-                          </div>
+                      </div>
+                    } @else if (item.type === 'image') {
+                      <div class="prop-section">
+                        <div class="prop-section-title">图片属性</div>
+                        <div class="prop-row">
+                          <label>图片来源</label>
+                          <select class="prop-select" [(ngModel)]="$any(item.config)['source']">
+                            <option value="url">URL</option>
+                            <option value="field">数据字段</option>
+                          </select>
                         </div>
-                      }
-
-                      @case ('barcode') {
-                        <div class="prop-section">
-                          <div class="prop-section-title">条形码属性</div>
-                          <div class="prop-row">
-                            <label>格式</label>
-                            <select class="prop-select" [(ngModel)]="item.config['format']">
-                              @for (fmt of barcodeFormats; track fmt) {
-                                <option [value]="fmt">{{ fmt }}</option>
-                              }
-                            </select>
-                          </div>
-                          <div class="prop-row">
-                            <label>绑定字段/值</label>
-                            <input class="prop-input" [(ngModel)]="item.config['value']"
-                                   placeholder="字段名或静态值" />
-                          </div>
-                          <div class="prop-row">
-                            <mat-checkbox [(ngModel)]="item.config['showText']">显示文字</mat-checkbox>
-                          </div>
+                        <div class="prop-row">
+                          <label>适应方式</label>
+                          <select class="prop-select" [(ngModel)]="$any(item.config)['fit']">
+                            <option value="contain">完整显示</option>
+                            <option value="cover">填充</option>
+                          </select>
                         </div>
-                      }
-
-                      @case ('chart') {
-                        <div class="prop-section">
-                          <div class="prop-section-title">图表属性</div>
-                          <div class="prop-row">
-                            <label>图表类型</label>
-                            <select class="prop-select" [(ngModel)]="item.config['chartType']">
-                              @for (ct of chartTypes; track ct.value) {
-                                <option [value]="ct.value">{{ ct.label }}</option>
-                              }
-                            </select>
-                          </div>
-                          <div class="prop-row">
-                            <label>X轴字段</label>
-                            <select class="prop-select" [(ngModel)]="item.config['xField']">
-                              <option value="">-- 选择字段 --</option>
-                              @for (f of fields(); track f.name) {
-                                <option [value]="f.name">{{ f.label ?? f.name }}</option>
-                              }
-                            </select>
-                          </div>
-                          <div class="prop-row">
-                            <label>Y轴字段（逗号分隔）</label>
-                            <input class="prop-input" [(ngModel)]="yFieldsInput"
-                                   placeholder="sales, quantity"
-                                   (ngModelChange)="updateChartYFields($event)" />
-                          </div>
-                          <div class="prop-row">
-                            <label>显示图例</label>
-                            <mat-checkbox [(ngModel)]="item.config['showLegend']">显示</mat-checkbox>
-                          </div>
-                          <div class="prop-row">
-                            <label>显示数据标签</label>
-                            <mat-checkbox [(ngModel)]="item.config['showDataLabels']">显示</mat-checkbox>
-                          </div>
+                      </div>
+                    } @else if (item.type === 'line') {
+                      <div class="prop-section">
+                        <div class="prop-section-title">线条属性</div>
+                        <div class="prop-row">
+                          <label>方向</label>
+                          <select class="prop-select" [(ngModel)]="$any(item.config)['direction']">
+                            <option value="horizontal">水平</option>
+                            <option value="vertical">垂直</option>
+                          </select>
                         </div>
-                      }
-
-                      @case ('table') {
-                        <div class="prop-section">
-                          <div class="prop-section-title">表格属性</div>
-                          <div class="prop-row">
-                            <label>列宽合计（像素）</label>
-                            <span class="prop-hint">表格列宽总和：{{ calcTableColWidths(item) }}px</span>
-                          </div>
-                          <div class="prop-row">
-                            <label>斑马纹</label>
-                            <mat-checkbox [(ngModel)]="item.config['dataRow']['alternatingColors']">
-                              启用
-                            </mat-checkbox>
-                          </div>
-                          <div class="prop-row">
-                            <label>合计行</label>
-                            <mat-checkbox [(ngModel)]="item.config['summaryRow']['visible']">
-                              显示
-                            </mat-checkbox>
-                          </div>
+                        <div class="prop-row">
+                          <label>线宽</label>
+                          <input class="prop-input small" type="number" [(ngModel)]="$any(item.config)['thickness']" />
                         </div>
-                      }
-
-                      @default {
-                        <div class="prop-section">
-                          <div class="prop-empty">该类型暂无专属属性</div>
+                      </div>
+                    } @else if (item.type === 'rectangle') {
+                      <div class="prop-section">
+                        <div class="prop-section-title">矩形属性</div>
+                        <div class="prop-row">
+                          <label>填充色</label>
+                          <input class="prop-input" type="color" [(ngModel)]="$any(item.config)['fill']" />
                         </div>
-                      }
+                        <div class="prop-row">
+                          <label>边框宽</label>
+                          <input class="prop-input small" type="number" [(ngModel)]="$any(item.config)['border']['width']" />
+                        </div>
+                      </div>
+                    } @else if (item.type === 'barcode') {
+                      <div class="prop-section">
+                        <div class="prop-section-title">条形码属性</div>
+                        <div class="prop-row">
+                          <label>格式</label>
+                          <select class="prop-select" [(ngModel)]="$any(item.config)['format']">
+                            @for (fmt of barcodeFormats; track fmt) {
+                              <option [value]="fmt">{{ fmt }}</option>
+                            }
+                          </select>
+                        </div>
+                        <div class="prop-row">
+                          <label>值</label>
+                          <input class="prop-input" [(ngModel)]="$any(item.config)['value']" placeholder="字段名或静态值" />
+                        </div>
+                      </div>
+                    } @else if (item.type === 'chart') {
+                      <div class="prop-section">
+                        <div class="prop-section-title">图表属性</div>
+                        <div class="prop-row">
+                          <label>图表类型</label>
+                          <select class="prop-select" [(ngModel)]="$any(item.config)['chartType']">
+                            @for (ct of chartTypes; track ct.value) {
+                              <option [value]="ct.value">{{ ct.label }}</option>
+                            }
+                          </select>
+                        </div>
+                        <div class="prop-row">
+                          <label>X轴字段</label>
+                          <select class="prop-select" [(ngModel)]="$any(item.config)['xField']">
+                            <option value="">-- 选择字段 --</option>
+                            @for (f of fields(); track f.name) {
+                              <option [value]="f.name">{{ f.label ?? f.name }}</option>
+                            }
+                          </select>
+                        </div>
+                      </div>
+                    } @else if (item.type === 'table') {
+                      <div class="prop-section">
+                        <div class="prop-section-title">表格属性</div>
+                        <div class="prop-row">
+                          <label>斑马纹</label>
+                          <mat-checkbox [(ngModel)]="$any(item.config).dataRow.alternatingColors">启用</mat-checkbox>
+                        </div>
+                      </div>
+                    } @else {
+                      <div class="prop-section">
+                        <div class="prop-empty">该类型暂无专属属性</div>
+                      </div>
                     }
 
                     <!-- 样式 -->
@@ -656,17 +525,17 @@ interface CanvasItem extends ReportItem {
                       <div class="prop-row">
                         <label>文字颜色</label>
                         <input class="prop-input" type="color"
-                               [(ngModel)]="item.styleInline['color']" />
+                               [(ngModel)]="item.styleInline!['color']" />
                       </div>
                       <div class="prop-row">
                         <label>背景色</label>
                         <input class="prop-input" type="color"
-                               [(ngModel)]="item.styleInline['backgroundColor']" />
+                               [(ngModel)]="item.styleInline!['backgroundColor']" />
                       </div>
                       <div class="prop-row">
                         <label>字号</label>
                         <input class="prop-input small" type="number"
-                               [(ngModel)]="item.styleInline['fontSize']" />
+                               [(ngModel)]="item.styleInline!['fontSize']" />
                       </div>
                     </div>
 
