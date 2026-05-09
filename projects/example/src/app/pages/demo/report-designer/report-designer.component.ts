@@ -223,7 +223,7 @@ interface BandSummary {
 })
 export class ReportDesignerPageComponent implements OnInit {
 
-    currentTemplate = signal<ReportTemplate | null>(null);
+    currentTemplate = signal<ReportTemplate>(createEmptyTemplate('Trade Report'));
     lastTemplate = signal<ReportTemplate | null>(null);
     totalItems = signal(0);
     bandSummary = signal<BandSummary[]>([]);

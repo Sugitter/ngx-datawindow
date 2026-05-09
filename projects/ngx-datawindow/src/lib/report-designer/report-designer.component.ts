@@ -18,7 +18,8 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DragDropModule, CdkDragDrop, CdkDrag, CdkDropList } from '@angular/cdk/drag-drop';
+import { DragDropModule, CdkDragDrop, CdkDrag, CdkDropList, CdkDragStart, CdkDragEnd } from '@angular/cdk/drag-drop';
+import { Subject } from 'rxjs';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -89,6 +90,15 @@ interface CanvasItem extends ReportItem {
 
           <mat-divider vertical />
 
+          <mat-divider vertical />
+
+          <!-- 撤销/重做 -->
+          <button mat-icon-button (click)="undo()" matTooltip="撤销 (Ctrl+Z)">
+            <mat-icon>undo</mat-icon>
+          </button>
+          <button mat-icon-button (click)="redo()" matTooltip="重做 (Ctrl+Y)">
+            <mat-icon>redo</mat-icon>
+          </button>
           <!-- 视图操作 -->
           <button mat-icon-button (click)="togglePreview()" [matTooltip]="previewMode() ? '返回编辑' : '预览报表'">
             <mat-icon>{{ previewMode() ? 'edit' : 'preview' }}</mat-icon>
@@ -125,9 +135,7 @@ interface CanvasItem extends ReportItem {
 
         @if (!previewMode()) {
           <!-- 左侧工具箱 + 数据源面板 -->
-          <div class="designer-left" cdkDropList
-               [cdkDropListData]="toolboxItems"
-               cdkDropListSortingDisabled>
+          <div class="designer-left">
 
             <mat-tab-group class="left-tabs" animationDuration="150ms">
               <!-- 工具箱 Tab -->
@@ -137,7 +145,8 @@ interface CanvasItem extends ReportItem {
                     <div class="toolbox-item"
                          cdkDrag
                          [cdkDragData]="item.type"
-                         (cdkDragDropped)="onToolboxDrop($event)">
+                         (cdkDragStarted)="onToolboxDragStarted($event, item.type)"
+                         (cdkDragEnded)="onToolboxDragEnded($event)">
                       <mat-icon>{{ item.icon }}</mat-icon>
                       <span>{{ item.label }}</span>
                     </div>
@@ -154,7 +163,8 @@ interface CanvasItem extends ReportItem {
                       <div class="ds-field"
                            cdkDrag
                            [cdkDragData]="{type: 'field', field: field.name}"
-                           (cdkDragDropped)="onFieldDropToCanvas($event)">
+                           (cdkDragStarted)="onToolboxDragStarted($event, {type: 'field', field: field.name})"
+                           (cdkDragEnded)="onToolboxDragEnded($event)">
                         <mat-icon class="ds-field-icon">text_fields</mat-icon>
                         <div class="ds-field-info">
                           <span class="ds-field-name">{{ field.name }}</span>
@@ -168,7 +178,8 @@ interface CanvasItem extends ReportItem {
                       <div class="ds-field ds-agg"
                            cdkDrag
                            [cdkDragData]="{type: 'computed', func: agg}"
-                           (cdkDragDropped)="onFieldDropToCanvas($event)">
+                           (cdkDragStarted)="onToolboxDragStarted($event, {type: 'computed', func: agg})"
+                           (cdkDragEnded)="onToolboxDragEnded($event)">
                         <mat-icon class="ds-field-icon">calculate</mat-icon>
                         <span class="ds-field-name">{{ agg }}()</span>
                       </div>
@@ -229,14 +240,17 @@ interface CanvasItem extends ReportItem {
 
                 <!-- 页面画布 -->
                 <div class="page-canvas"
+                     id="canvas-drop-list"
                      [style.width.px]="pageWidth"
                      [style.height.px]="pageHeight"
                      [style.background]="'#fff'"
                      [style.boxShadow]="'0 2px 8px rgba(0,0,0,0.15)'"
                      cdkDropList
                      [cdkDropListData]="activeBandItems()"
+                     [id]="canvasDropListId"
                      (cdkDropListDropped)="onCanvasDrop($event)"
-                     (click)="deselectAll($event)">
+                     (click)="deselectAll($event)"
+                     (mouseup)="onCanvasMouseUp($event)">
 
                   <!-- 各带区 -->
                   @for (band of template().bands; track band.id) {
@@ -740,8 +754,8 @@ interface CanvasItem extends ReportItem {
     .designer-toolbar {
       display: flex;
       align-items: center;
-      background: #fafafa;
-      border-bottom: 1px solid #e0e0e0;
+      background: linear-gradient(135deg, #3f51b5 0%, #5c6bc0 100%);
+      border-bottom: 1px solid rgba(0,0,0,0.15);
       padding: 0 8px;
       height: 48px;
       gap: 4px;
@@ -750,11 +764,12 @@ interface CanvasItem extends ReportItem {
     .toolbar-title {
       font-weight: 600;
       font-size: 15px;
-      color: #333;
+      color: #ffffff;
       margin-right: 16px;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.2);
     }
     .toolbar-actions { display: flex; align-items: center; gap: 2px; }
-    .zoom-label { font-size: 12px; color: #666; min-width: 40px; text-align: center; }
+    .zoom-label { font-size: 12px; color: rgba(255,255,255,0.9); min-width: 40px; text-align: center; font-weight: 500; }
 
     /* 工作区 */
     .designer-body {
@@ -772,6 +787,7 @@ interface CanvasItem extends ReportItem {
       flex-direction: column;
       overflow: hidden;
       flex-shrink: 0;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.05);
     }
     .left-tabs { flex: 1; display: flex; flex-direction: column; }
     ::ng-deep .left-tabs .mat-mdc-tab-body-wrapper { flex: 1; overflow: auto; }
@@ -787,14 +803,22 @@ interface CanvasItem extends ReportItem {
       padding: 6px 10px;
       background: white;
       border: 1px solid #e0e0e0;
-      border-radius: 4px;
+      border-radius: 6px;
       cursor: grab;
       font-size: 12px;
-      transition: all 0.15s;
+      color: #444;
+      transition: all 0.18s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     }
-    .toolbox-item:hover { border-color: #3f51b5; background: #f0f0ff; }
-    .toolbox-item mat-icon { font-size: 16px; width: 16px; height: 16px; color: #666; }
-    .toolbox-item:active { cursor: grabbing; }
+    .toolbox-item:hover {
+      border-color: #3f51b5;
+      background: #f5f6ff;
+      box-shadow: 0 2px 8px rgba(63,81,181,0.15);
+      transform: translateX(2px);
+    }
+    .toolbox-item mat-icon { font-size: 16px; width: 16px; height: 16px; color: #5c6bc0; }
+    .toolbox-item:hover mat-icon { color: #3f51b5; }
+    .toolbox-item:active { cursor: grabbing; transform: scale(0.97); }
 
     /* 数据源面板 */
     .datasource-list { padding: 8px; }
@@ -883,22 +907,26 @@ interface CanvasItem extends ReportItem {
       position: absolute;
       cursor: move;
       box-sizing: border-box;
-      border: 1px solid transparent;
-      border-radius: 2px;
-      transition: border-color 0.1s;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 3px;
+      transition: border-color 0.12s, box-shadow 0.12s;
       overflow: hidden;
+      background: white;
     }
-    .canvas-item:hover { border-color: #90a4ae; }
+    .canvas-item:hover {
+      border-color: #90a4ae;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }
     .item-selected {
       border: 2px solid #3f51b5 !important;
-      box-shadow: 0 0 0 2px rgba(63,81,181,0.2);
+      box-shadow: 0 0 0 3px rgba(63,81,181,0.18), 0 4px 12px rgba(0,0,0,0.15) !important;
     }
     .item-content {
       width: 100%;
       height: 100%;
       display: flex;
       align-items: center;
-      padding: 2px 4px;
+      padding: 2px 6px;
       font-size: 11px;
       color: #333;
       white-space: nowrap;
@@ -963,6 +991,7 @@ interface CanvasItem extends ReportItem {
       flex-direction: column;
       overflow: hidden;
       flex-shrink: 0;
+      box-shadow: -2px 0 8px rgba(0,0,0,0.05);
     }
     .right-tabs { flex: 1; display: flex; flex-direction: column; }
     ::ng-deep .right-tabs .mat-mdc-tab-body-wrapper { flex: 1; overflow: auto; }
@@ -1232,7 +1261,7 @@ export class ReportDesignerComponent implements OnInit, OnDestroy {
     return ticks;
   });
 
-  yFieldsInput = '';
+  canvasDropListId = 'canvas-drop-list';
 
   // ══════════════════════════════════════════════════════════════
   // 拖拽状态（用于画布内移动）
@@ -1340,19 +1369,92 @@ export class ReportDesignerComponent implements OnInit, OnDestroy {
   // 工具箱拖放 → 画布
   // ══════════════════════════════════════════════════════════════
 
+  // 跨列表拖拽：工具箱项被拖起时设置 canvas 为接收目标
+  private _toolboxDragActive = signal(false);
+
+  onToolboxDragStarted(_: CdkDragStart, data: any): void {
+    this._toolboxDragActive.set(true);
+    this._lastDragData = data;
+  }
+
+  onToolboxDragEnded(_: CdkDragEnd): void {
+    this._toolboxDragActive.set(false);
+  }
+
+  onCanvasMouseUp(event: MouseEvent): void {
+    if (!this._toolboxDragActive()) return;
+    this._toolboxDragActive.set(false);
+
+    const type = this._lastDragData as ReportItemType;
+    if (!type) return;
+    this._lastDragData = null;
+
+    const bandId = this.activeBandId();
+    const band = this.template().bands.find(b => b.id === bandId);
+    if (!band) return;
+
+    const canvasEl = document.getElementById(this.canvasDropListId);
+    if (!canvasEl) return;
+    const canvasRect = canvasEl.getBoundingClientRect();
+    const scale = this.zoom() / 100;
+    const scrollEl = canvasEl.closest('.canvas-scroll') as HTMLElement;
+    const scrollLeft = scrollEl?.scrollLeft ?? 0;
+    const scrollTop = scrollEl?.scrollTop ?? 0;
+
+    const relX = (event.clientX - canvasRect.left + scrollLeft) / scale;
+    const relY = (event.clientY - canvasRect.top + scrollTop) / scale;
+
+    const item = this._createItem(type, bandId);
+    item.x = Math.max(0, Math.round(relX - item.width / 2));
+    item.y = Math.max(0, Math.round(relY - item.height / 2));
+
+
+    this._pushUndo();
+    band.items.push(item);
+    this.selectedItemId.set(item.id);
+    this.template.update(t => ({ ...t }));
+  }
+
+  private _lastDragData: ReportItemType | null = null;
+
   onToolboxDrop(event: CdkDragDrop<string>): void {
+    // 仅处理从工具箱/数据源拖入画布的情况（跨列表）
+    // 列表内排序时忽略
+    if (event.previousContainer === event.container) return;
+
     const type = event.item.data as ReportItemType;
     const bandId = this.activeBandId();
     const band = this.template().bands.find(b => b.id === bandId);
     if (!band) return;
 
     const item = this._createItem(type, bandId);
+
+    // 从事件中读取实际落点坐标
+    if (event.dropPoint) {
+      const canvasEl = document.getElementById('canvas-drop-list');
+      if (canvasEl) {
+        const rect = canvasEl.getBoundingClientRect();
+        const scale = this.zoom() / 100;
+        // 计算相对于画布的像素坐标（考虑缩放和滚动）
+        const scrollEl = canvasEl.closest('.canvas-scroll') as HTMLElement;
+        const scrollLeft = scrollEl ? scrollEl.scrollLeft : 0;
+        const scrollTop = scrollEl ? scrollEl.scrollTop : 0;
+        const relX = (event.dropPoint.x - rect.left + scrollLeft) / scale;
+        const relY = (event.dropPoint.y - rect.top + scrollTop) / scale;
+        item.x = Math.max(0, Math.round(relX - item.width / 2));
+        item.y = Math.max(0, Math.round(relY - item.height / 2));
+      }
+    }
+
+    this._pushUndo();
     band.items.push(item);
     this.selectedItemId.set(item.id);
-    this.template.update(t => ({ ...t })); // 触发更新
+    this.template.update(t => ({ ...t }));
   }
 
   onFieldDropToCanvas(event: CdkDragDrop<any>): void {
+    if (event.previousContainer === event.container) return;
+
     const dragData = event.item.data;
     const bandId = this.activeBandId();
     const band = this.template().bands.find(b => b.id === bandId);
@@ -1362,6 +1464,8 @@ export class ReportDesignerComponent implements OnInit, OnDestroy {
     if (dragData.type === 'field') {
       item = this._createItem('field', bandId);
       item.config = { type: 'field', field: dragData.field, align: 'left', nullText: '' };
+      item.width = 120;
+      item.height = 25;
     } else if (dragData.type === 'computed') {
       item = this._createItem('computed', bandId);
       item.config = {
@@ -1369,23 +1473,47 @@ export class ReportDesignerComponent implements OnInit, OnDestroy {
         expression: `{${dragData.func}(${dragData.field ?? 'field_name'})}`,
         dataType: 'number',
       };
+      item.width = 150;
+      item.height = 25;
     } else {
       return;
     }
 
-    // 放在鼠标位置
-    item.x = 10;
-    item.y = 5;
-    item.width = 150;
-    item.height = 25;
+    // 从事件中读取实际落点坐标
+    if (event.dropPoint) {
+      const canvasEl = document.getElementById('canvas-drop-list');
+      if (canvasEl) {
+        const rect = canvasEl.getBoundingClientRect();
+        const scale = this.zoom() / 100;
+        const scrollEl = canvasEl.closest('.canvas-scroll') as HTMLElement;
+        const scrollLeft = scrollEl ? scrollEl.scrollLeft : 0;
+        const scrollTop = scrollEl ? scrollEl.scrollTop : 0;
+        item.x = Math.max(0, Math.round((event.dropPoint.x - rect.left + scrollLeft) / scale - item.width / 2));
+        item.y = Math.max(0, Math.round((event.dropPoint.y - rect.top + scrollTop) / scale - item.height / 2));
+      }
+    }
 
+    this._pushUndo();
     band.items.push(item);
     this.selectedItemId.set(item.id);
     this.template.update(t => ({ ...t }));
   }
 
   onCanvasDrop(event: CdkDragDrop<ReportItem[]>): void {
-    // 同带区内排序（暂时不实现）
+    // 不处理画布内排序，拖拽位置已通过 mousedown/mousemove 在 canvas-item 层面处理
+    // 此处仅处理列表内的位置调整
+    if (event.previousContainer === event.container) {
+      // 同带区内的报表项排序
+      const bandId = this.activeBandId();
+      const band = this.template().bands.find(b => b.id === bandId);
+      if (band) {
+        const items = [...band.items];
+        const [moved] = items.splice(event.previousIndex, 1);
+        items.splice(event.currentIndex, 0, moved);
+        band.items = items;
+        this.template.update(t => ({ ...t }));
+      }
+    }
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -1410,6 +1538,7 @@ export class ReportDesignerComponent implements OnInit, OnDestroy {
 
   toggleBandVisibility(band: ReportBand, event: MouseEvent): void {
     event.stopPropagation();
+    this._pushUndo();
     band.visible = band.visible === false ? true : false;
     this.template.update(t => ({ ...t }));
   }
@@ -1481,6 +1610,7 @@ export class ReportDesignerComponent implements OnInit, OnDestroy {
     for (const band of this.template().bands) {
       const idx = band.items.findIndex(i => i.id === id);
       if (idx >= 0) {
+        this._pushUndo();
         band.items.splice(idx, 1);
         if (this.selectedItemId() === id) this.selectedItemId.set(null);
         this.template.update(t => ({ ...t }));
@@ -1490,6 +1620,7 @@ export class ReportDesignerComponent implements OnInit, OnDestroy {
   }
 
   onItemGeometryChange(item: ReportItem): void {
+    this._pushUndo();
     this.template.update(t => ({ ...t }));
   }
 
@@ -1509,6 +1640,7 @@ export class ReportDesignerComponent implements OnInit, OnDestroy {
       case 'bottom': item.y = ph - item.height; break;
       case 'middle': item.y = (ph - item.height) / 2; break;
     }
+    this._pushUndo();
     this.template.update(t => ({ ...t }));
   }
 
@@ -1586,10 +1718,55 @@ export class ReportDesignerComponent implements OnInit, OnDestroy {
   // 键盘快捷键
   // ══════════════════════════════════════════════════════════════
 
+  // ══════════════════════════════════════════════════════════════
+  // 键盘快捷键
+  // ══════════════════════════════════════════════════════════════
+
+  private _undoStack: ReportTemplate[] = [];
+  private _redoStack: ReportTemplate[] = [];
+  private static readonly MAX_UNDO = 50;
+
+
+  private _pushUndo(): void {
+    this._undoStack.push(JSON.parse(JSON.stringify(this.template())));
+    if (this._undoStack.length > 50) {
+      this._undoStack.shift();
+    }
+    this._redoStack = [];
+  }
+
+
+  undo(): void {
+    if (this._undoStack.length === 0) return;
+    this._redoStack.push(JSON.parse(JSON.stringify(this.template())));
+    const prev = this._undoStack.pop()!;
+    this.template.set(prev);
+    this.selectedItemId.set(null);
+    this._snackBar.open('撤销', '关闭', { duration: 1200 });
+  }
+
+
+  redo(): void {
+    if (this._redoStack.length === 0) return;
+    this._undoStack.push(JSON.parse(JSON.stringify(this.template())));
+    const next = this._redoStack.pop()!;
+    this.template.set(next);
+    this.selectedItemId.set(null);
+    this._snackBar.open('重做', '关闭', { duration: 1200 });
+  }
+
   private _onKeyDown = (e: KeyboardEvent): void => {
+    const tag = (e.target as HTMLElement).tagName;
+    const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+
+
+    if (inInput) return;
+
+    if (e.ctrlKey && e.key === 'z') { e.preventDefault(); this.undo(); return; }
+    if (e.ctrlKey && e.key === 'y') { e.preventDefault(); this.redo(); return; }
+    if (e.ctrlKey && e.key === 'Z') { e.preventDefault(); this.redo(); return; }
+
     if (e.key === 'Delete' || e.key === 'Backspace') {
-      const tag = (e.target as HTMLElement).tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
       const id = this.selectedItemId();
       if (id) this.deleteItem(id);
     }
@@ -1599,6 +1776,14 @@ export class ReportDesignerComponent implements OnInit, OnDestroy {
     if (e.ctrlKey && e.key === 's') {
       e.preventDefault();
       this.onSave();
+    }
+    if (e.ctrlKey && e.key === 'a') {
+      e.preventDefault();
+      const bandId = this.activeBandId();
+      const band = this.template().bands.find(b => b.id === bandId);
+      if (band && band.items.length > 0) {
+        this.selectedItemId.set(band.items[0].id);
+      }
     }
   };
 
@@ -1633,8 +1818,8 @@ export class ReportDesignerComponent implements OnInit, OnDestroy {
       id: this._genId(),
       type,
       bandId,
-      x: 10 + (this._idCounter % 5) * 20,
-      y: 5,
+      x: 0,
+      y: 0,
       ...def,
     } as ReportItem;
   }
