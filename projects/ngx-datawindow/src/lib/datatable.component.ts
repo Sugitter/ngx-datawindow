@@ -1,6 +1,6 @@
 /**
- * DataTableComponent - 主表格组件
- * 封装 Angular Material Table + DataStore 引擎
+ * DataTableComponent - ��������
+ * ��װ Angular Material Table + DataStore ����
  */
 
 import {
@@ -55,23 +55,23 @@ export interface ToolbarEvent { action: ToolbarAction; }
   ],
   template: `
     <div class="dt-container" [class.dt-loading]="loading()">
-      <!-- 标题栏 -->
+      <!-- ������ -->
       @if (config().showTitle !== false && config().title) {
         <div class="dt-title-bar">
           <span class="dt-title">{{ config().title }}</span>
         </div>
       }
 
-      <!-- 工具栏 -->
+      <!-- ������ -->
       @if (config().showToolbar !== false) {
         <div class="dt-toolbar">
-          <!-- 全局搜索 -->
+          <!-- ȫ������ -->
           @if (config().showGlobalSearch !== false) {
             <mat-form-field appearance="outline" class="dt-search">
-              <mat-label>搜索</mat-label>
+              <mat-label>����</mat-label>
               <input matInput [value]="searchQuery()"
                 (input)="onSearchChange($event)"
-                placeholder="全局搜索...">
+                placeholder="ȫ������...">
               @if (searchQuery()) {
                 <button matSuffix mat-icon-button (click)="clearSearch()">
                   <mat-icon>close</mat-icon>
@@ -82,12 +82,12 @@ export interface ToolbarEvent { action: ToolbarAction; }
 
           <span class="dt-toolbar-spacer"></span>
 
-          <!-- 工具栏按钮 -->
+          <!-- ��������ť -->
           @if (toolbarActions()?.add) {
             <button mat-flat-button color="primary" (click)="onAdd()"
               [disabled]="loading()">
               <mat-icon>add</mat-icon>
-              {{ getActionLabel(toolbarActions()?.add, '新增') }}
+              {{ getActionLabel(toolbarActions()?.add, '����') }}
             </button>
           }
 
@@ -95,7 +95,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
             <button mat-stroked-button color="warn" (click)="onDeleteSelected()"
               [disabled]="!hasSelection() || loading()">
               <mat-icon>delete</mat-icon>
-              {{ getActionLabel(toolbarActions()?.delete, '删除') }}
+              {{ getActionLabel(toolbarActions()?.delete, 'ɾ��') }}
               @if (selectionCount() > 0) {
                 <span class="dt-badge">{{ selectionCount() }}</span>
               }
@@ -104,45 +104,45 @@ export interface ToolbarEvent { action: ToolbarAction; }
 
           @if (toolbarActions()?.refresh) {
             <button mat-icon-button (click)="onRefresh()" [disabled]="loading()"
-              matTooltip="刷新">
+              matTooltip="ˢ��">
               <mat-icon>refresh</mat-icon>
             </button>
           }
 
           @if (toolbarActions()?.export) {
             <button mat-icon-button [matMenuTriggerFor]="exportMenu"
-              [disabled]="loading()" matTooltip="导出">
+              [disabled]="loading()" matTooltip="����">
               <mat-icon>download</mat-icon>
             </button>
             <mat-menu #exportMenu="matMenu">
               <button mat-menu-item (click)="exportData('csv')">
                 <mat-icon>table_chart</mat-icon>
-                <span>导出 CSV</span>
+                <span>���� CSV</span>
               </button>
               <button mat-menu-item (click)="exportData('xlsx')">
                 <mat-icon>insert_drive_file</mat-icon>
-                <span>导出 Excel</span>
+                <span>���� Excel</span>
               </button>
               <button mat-menu-item (click)="exportData('json')">
                 <mat-icon>code</mat-icon>
-                <span>导出 JSON</span>
+                <span>���� JSON</span>
               </button>
             </mat-menu>
           }
 
           @if (toolbarActions()?.import !== false) {
             <button mat-icon-button [matMenuTriggerFor]="importMenu"
-              [disabled]="loading()" matTooltip="导入">
+              [disabled]="loading()" matTooltip="����">
               <mat-icon>upload</mat-icon>
             </button>
             <mat-menu #importMenu="matMenu">
               <button mat-menu-item (click)="triggerImport('csv')">
                 <mat-icon>table_chart</mat-icon>
-                <span>导入 CSV</span>
+                <span>���� CSV</span>
               </button>
               <button mat-menu-item (click)="triggerImport('xlsx')">
                 <mat-icon>insert_drive_file</mat-icon>
-                <span>导入 Excel</span>
+                <span>���� Excel</span>
               </button>
             </mat-menu>
             <input type="file" #importFileInput style="display:none"
@@ -158,7 +158,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
         </div>
       }
 
-      <!-- 列过滤行 -->
+      <!-- �й����� -->
       @if (config().showColumnFilter) {
         <div class="dt-column-filters">
           @for (col of visibleColumns(); track col.field) {
@@ -170,7 +170,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
                       <mat-label>{{ col.header }}</mat-label>
                       <mat-select [value]="getColumnFilter(col.field)"
                         (selectionChange)="onColumnFilter(col.field, $event.value)">
-                        <mat-option [value]="null">全部</mat-option>
+                        <mat-option [value]="null">ȫ��</mat-option>
                         @for (opt of col.filterOptions; track opt.value) {
                           <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
                         }
@@ -192,34 +192,34 @@ export interface ToolbarEvent { action: ToolbarAction; }
         </div>
       }
 
-      <!-- ═══ 行分组（GroupBy）工具栏 ═══ -->
+      <!-- �T�T�T �з��飨GroupBy�������� �T�T�T -->
       @if (config().groupBy && !virtualScrollEnabled()) {
         <div class="dt-groupbar">
           <mat-icon class="dt-groupbar-icon">view_group</mat-icon>
-          <span class="dt-groupbar-label">按</span>
+          <span class="dt-groupbar-label">��</span>
           <span class="dt-groupbar-field">{{ getGroupByFieldLabel() }}</span>
-          <span class="dt-groupbar-label">分组</span>
+          <span class="dt-groupbar-label">����</span>
           @if (config().groupBy?.collapsed !== undefined) {
             <button mat-icon-button class="dt-groupbar-collapse-btn"
               (click)="toggleGroupByCollapse()"
-              [matTooltip]="isGroupByCollapsed() ? '展开分组' : '折叠分组'">
+              [matTooltip]="isGroupByCollapsed() ? 'չ������' : '�۵�����'">
               <mat-icon>{{ isGroupByCollapsed() ? 'expand_more' : 'expand_less' }}</mat-icon>
             </button>
           }
           <span class="dt-toolbar-spacer"></span>
           <button mat-button class="dt-groupbar-clear-btn" (click)="clearGroupBy()">
             <mat-icon>close</mat-icon>
-            清除分组
+            �������
           </button>
         </div>
       }
 
-      <!-- 表格主体 -->
+      <!-- ������� -->
       <div class="dt-table-wrapper" [class.dt-virtual-mode]="virtualScrollEnabled()" [class.dt-fixed-height]="!autoHeight()">
         @if (virtualScrollEnabled()) {
-          <!-- ═══ 虚拟滚动模式 — div rows + CDK VirtualScrollStrategy ═══ -->
+          <!-- �T�T�T �������ģʽ �� div rows + CDK VirtualScrollStrategy �T�T�T -->
           <div class="dt-virtual-container">
-            <!-- 固定表头 -->
+            <!-- �̶���ͷ -->
             <div class="dt-virtual-header">
               <div class="dt-virtual-header-row">
                 @if (selectionMode() !== 'none') {
@@ -250,12 +250,12 @@ export interface ToolbarEvent { action: ToolbarAction; }
                   </div>
                 }
                 <div class="dt-virtual-cell dt-virtual-header-cell dt-sticky-right" style="width:96px;min-width:96px;text-align:center;">
-                  操作
+                  ����
                 </div>
               </div>
             </div>
 
-            <!-- 虚拟滚动体 -->
+            <!-- ��������� -->
             <cdk-virtual-scroll-viewport
               class="dt-virtual-viewport"
               (scrolledIndexChange)="onScrollIndexChange($event)">
@@ -305,32 +305,32 @@ export interface ToolbarEvent { action: ToolbarAction; }
                 <div class="dt-virtual-cell dt-sticky-right" style="width:96px;min-width:96px;text-align:center;">
                   @if (row._status === 'deleted') {
                     <button mat-button color="primary" (click)="restoreRow(row._id); $event.stopPropagation()" style="min-width:auto;padding:0 8px;font-size:12px;">
-                      恢复
+                      �ָ�
                     </button>
                   } @else {
-                    <button mat-icon-button matTooltip="编辑" (click)="editRow(row); $event.stopPropagation()" style="width:28px;height:28px;">
+                    <button mat-icon-button matTooltip="�༭" (click)="editRow(row); $event.stopPropagation()" style="width:28px;height:28px;">
                       <mat-icon style="font-size:18px;">edit</mat-icon>
                     </button>
-                    <button mat-icon-button color="warn" matTooltip="删除" (click)="deleteRow(row._id); $event.stopPropagation()" style="width:28px;height:28px;">
+                    <button mat-icon-button color="warn" matTooltip="ɾ��" (click)="deleteRow(row._id); $event.stopPropagation()" style="width:28px;height:28px;">
                       <mat-icon style="font-size:18px;">delete</mat-icon>
                     </button>
                   }
                 </div>
               </div>
 
-              <!-- 空状态 -->
+              <!-- ��״̬ -->
               @if (virtualData().length === 0) {
                 <div class="dt-virtual-empty">
-                  {{ config().emptyMessage || '暂无数据' }}
+                  {{ config().emptyMessage || '��������' }}
                 </div>
               }
             </cdk-virtual-scroll-viewport>
           </div>
         } @else {
-          <!-- 普通分页模式 -->
+          <!-- ��ͨ��ҳģʽ -->
           <table mat-table [dataSource]="dataSource()" matSort (matSortChange)="onSortChange($event)" class="dt-table">
 
-          <!-- 选择列 -->
+          <!-- ѡ���� -->
           @if (selectionMode() !== 'none') {
             <ng-container matColumnDef="select">
               <th mat-header-cell *matHeaderCellDef>
@@ -350,7 +350,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
             </ng-container>
           }
 
-          <!-- 数据列 -->
+          <!-- ������ -->
           @for (col of visibleColumns(); track col.field) {
             <ng-container [matColumnDef]="col.field">
               <th mat-header-cell *matHeaderCellDef
@@ -386,20 +386,20 @@ export interface ToolbarEvent { action: ToolbarAction; }
             </ng-container>
           }
 
-          <!-- 操作列 -->
+          <!-- ������ -->
           <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef style="width: 120px">操作</th>
+            <th mat-header-cell *matHeaderCellDef style="width: 120px">����</th>
             <td mat-cell *matCellDef="let row">
               @if (rowStatus(row) === 'deleted') {
                 <button mat-button color="primary" (click)="restoreRow(row.id); $event.stopPropagation()">
-                  恢复
+                  �ָ�
                 </button>
               } @else {
-                <button mat-icon-button matTooltip="编辑"
+                <button mat-icon-button matTooltip="�༭"
                   (click)="editRow(row); $event.stopPropagation()">
                   <mat-icon>edit</mat-icon>
                 </button>
-                <button mat-icon-button matTooltip="删除" color="warn"
+                <button mat-icon-button matTooltip="ɾ��" color="warn"
                   (click)="deleteRow(row.id); $event.stopPropagation()">
                   <mat-icon>delete</mat-icon>
                 </button>
@@ -409,7 +409,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
 
           <tr mat-header-row *matHeaderRowDef="displayedColumns(); sticky: true"></tr>
 
-          <!-- ═══ 分组行（GroupBy）═════════════════════════════════════════════════ -->
+          <!-- �T�T�T �����У�GroupBy���T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T -->
           @for (grp of groupRows(); track grp.key) {
             <tr class="dt-group-row"
               [class.dt-group-row-collapsed]="grp.collapsed"
@@ -421,7 +421,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
                 <span class="dt-group-title">
                   {{ grp.title || grp.key }}
                 </span>
-                <span class="dt-group-count">{{ grp.rows.length }} 条</span>
+                <span class="dt-group-count">{{ grp.rows.length }} ��</span>
                 @for (agg of getGroupAggregations(grp); track agg.field) {
                   <span class="dt-group-agg">
                     <span class="dt-group-agg-label">{{ agg.label }}:</span>
@@ -458,10 +458,10 @@ export interface ToolbarEvent { action: ToolbarAction; }
                     </td>
                   }
                   <td style="width:120px;min-width:120px;text-align:center;padding:0 8px;">
-                    <button mat-icon-button matTooltip="编辑" (click)="editRow(row); $event.stopPropagation()">
+                    <button mat-icon-button matTooltip="�༭" (click)="editRow(row); $event.stopPropagation()">
                       <mat-icon>edit</mat-icon>
                     </button>
-                    <button mat-icon-button color="warn" matTooltip="删除"
+                    <button mat-icon-button color="warn" matTooltip="ɾ��"
                       (click)="deleteRow(row.id); $event.stopPropagation()">
                       <mat-icon>delete</mat-icon>
                     </button>
@@ -471,7 +471,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
             }
           }
 
-          <!-- 数据行（非分组模式下） -->
+          <!-- �����У��Ƿ���ģʽ�£� -->
           @if (!config().groupBy) {
             <tr mat-row *matRowDef="let row; columns: displayedColumns()"
             [class.dt-row-selected]="isRowSelected(row.id)"
@@ -484,17 +484,17 @@ export interface ToolbarEvent { action: ToolbarAction; }
           </tr>
           }
 
-          <!-- 空状态 -->
+          <!-- ��״̬ -->
           <tr class="mat-row" *matNoDataRow>
             <td class="mat-cell dt-empty" [attr.colspan]="displayedColumns().length">
-              {{ config().emptyMessage || '暂无数据' }}
+              {{ config().emptyMessage || '��������' }}
             </td>
           </tr>
         </table>
         }
       </div>
 
-      <!-- 分页器 -->
+      <!-- ��ҳ�� -->
       @if (config().showPaginator !== false) {
         <div class="dt-paginator-wrapper">
           <mat-paginator
@@ -508,16 +508,16 @@ export interface ToolbarEvent { action: ToolbarAction; }
         </div>
       }
 
-      <!-- 加载遮罩 -->
+      <!-- �������� -->
       @if (loading()) {
         <div class="dt-overlay">
           <mat-progress-spinner diameter="40"></mat-progress-spinner>
-          <span>{{ config().loadingMessage || '加载中...' }}</span>
+          <span>{{ config().loadingMessage || '������...' }}</span>
         </div>
       }
     </div>
 
-    <!-- 编辑单元格模板（默认内联编辑） -->
+    <!-- �༭��Ԫ��ģ�壨Ĭ�������༭�� -->
     <ng-template #editCell let-row let-col="col">
       @if (isEditing(row.id, col.field)) {
         @if (col.editType === 'select' && col.editOptions) {
@@ -656,7 +656,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
       min-height: 400px;
     }
 
-    /* ═══ 虚拟滚动 div 行布局 ═══ */
+    /* �T�T�T ������� div �в��� �T�T�T */
     .dt-virtual-container {
       display: flex;
       flex-direction: column;
@@ -714,13 +714,13 @@ export interface ToolbarEvent { action: ToolbarAction; }
       font-size: var(--dt-font-size);
     }
 
-    /* 虚拟模式下的行状态颜色 */
+    /* ����ģʽ�µ���״̬��ɫ */
     .dt-virtual-row.dt-row-selected { background: #bbdefb !important; }
     .dt-virtual-row.dt-row-new { background: #c8e6c9 !important; }
     .dt-virtual-row.dt-row-modified { background: #fff9c4 !important; }
     .dt-virtual-row.dt-row-deleted { background: #ffcdd2 !important; opacity: 0.65; text-decoration: line-through; }
 
-    /* 虚拟模式 sticky 列 */
+    /* ����ģʽ sticky �� */
     .dt-virtual-cell.dt-sticky-left {
       position: sticky;
       left: 0;
@@ -753,7 +753,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
       border-collapse: collapse;
     }
 
-    /* 表头固定 - 使用 Material 原生 sticky */
+    /* ��ͷ�̶� - ʹ�� Material ԭ�� sticky */
     .dt-table thead {
       position: sticky;
       top: 0;
@@ -775,7 +775,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
       border-right: none;
     }
 
-    /* 可调整列宽 */
+    /* �ɵ����п� */
     .dt-header-resizable {
       position: relative;
     }
@@ -800,7 +800,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
       user-select: none;
     }
 
-    /* 列宽调整虚线指示器 */
+    /* �п��������ָʾ�� */
     .dt-resize-line {
       position: fixed;
       top: 0;
@@ -811,7 +811,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
       opacity: 0.7;
     }
 
-    /* 列宽调整时，原列显示半透明蓝色预览 */
+    /* �п����ʱ��ԭ����ʾ��͸����ɫԤ�� */
     .dt-resize-preview {
       background: rgba(25, 118, 210, 0.08) !important;
     }
@@ -831,7 +831,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
       border-right: none;
     }
 
-    /* 分页器容器 */
+    /* ��ҳ������ */
     .dt-paginator-wrapper {
       flex-shrink: 0;
       background: #fafafa;
@@ -883,7 +883,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
       font-size: var(--dt-font-size);
     }
 
-    /* 可编辑单元格 */
+    /* �ɱ༭��Ԫ�� */
     .dt-cell-editable {
       cursor: text;
       display: block;
@@ -895,7 +895,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
       background: #f0f0f0;
     }
 
-    /* 实时数据更新高亮 */
+    /* ʵʱ���ݸ��¸��� */
     .dt-cell-highlight {
       animation: dt-cell-flash 0.4s ease-out;
     }
@@ -938,7 +938,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
 
     .dt-loading .dt-table-wrapper { filter: blur(1px); pointer-events: none; }
 
-    /* ═══ 分组行样式 ═══ */
+    /* �T�T�T ��������ʽ �T�T�T */
     .dt-groupbar {
       display: flex;
       align-items: center;
@@ -954,7 +954,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
     .dt-groupbar-collapse-btn { width: 24px; height: 24px; line-height: 24px; }
     .dt-groupbar-clear-btn { font-size: 12px; color: #999; }
 
-    /* 分组 header 行 */
+    /* ���� header �� */
     .dt-group-row {
       cursor: pointer;
       background: #e3f0ff !important;
@@ -988,7 +988,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
     .dt-group-agg-label { color: #888; }
     .dt-group-agg-value { font-weight: 600; color: #1565c0; }
 
-    /* 分组子行 — 用普通 tr 而非 mat-row 以避免 mat-sort 干扰 */
+    /* �������� �� ����ͨ tr ���� mat-row �Ա��� mat-sort ���� */
     .dt-group-child-row {
       height: var(--dt-row-height) !important;
       border-bottom: 1px solid var(--dt-grid-color);
@@ -1003,7 +1003,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
     }
     .dt-group-child-row td:last-child { border-right: none; }
 
-    /* Material 分页器覆盖 */
+    /* Material ��ҳ������ */
     ::ng-deep .dt-paginator-wrapper .mat-mdc-paginator {
       background: #fafafa;
       min-height: var(--dt-row-height) !important;
@@ -1056,7 +1056,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
       height: 18px !important;
     }
     
-    /* Material 表格行覆盖 - 强制统一高度 */
+    /* Material ����и��� - ǿ��ͳһ�߶� */
     ::ng-deep .dt-container .mat-mdc-header-row {
       height: var(--dt-row-height) !important;
       min-height: var(--dt-row-height) !important;
@@ -1085,7 +1085,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     @Inject(VIRTUAL_SCROLL_STRATEGY) readonly scrollStrategy: DataWindowVirtualScrollStrategy,
   ) {}
 
-  // ── 输入 ──────────────────────────────────────────────────────────────────
+  // ���� ���� ������������������������������������������������������������������������������������������������������������������������������������
 
   private _pendingData: Record<string, RawValue>[] | null = null;
   private _initialized = false;
@@ -1105,25 +1105,26 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
   @Input() set data(v: Record<string, RawValue>[]) {
     if (v && v.length > 0) {
       if (this._initialized && this._service && this._service['_ds']) {
-        // 服务已初始化，直接设置数据
+        // �����ѳ�ʼ����ֱ����������
         this._service.setData(v);
-        if (this._virtualScrollEnabled()) {
-          this._syncAllRows();
-        }
+        // Always sync all rows (not just for virtual scroll) so keyboard nav / range select work
+        this._syncAllRows();
       } else {
-        // 服务未初始化，缓存数据
+        // ����δ��ʼ������������
         this._pendingData = v;
         this._tryInitialize();
       }
     }
+    // 无论哪种路径都标记变更检测，防止父组件 OnPush 时数据不更新
+    this._cdr?.markForCheck();
   }
   @Input() set tableConfig(v: TableConfig) {
-    this._tableConfig = v;
-    this._tryInitialize();
-  }
+      this._tableConfig = v;
+      this._tryInitialize();
+    }
   @Input() set isLoading(v: boolean) { this._loadingInput.set(v ?? false); }
 
-  /** 实时数据源（Observable） */
+  /** ʵʱ����Դ��Observable�� */
   @Input() set data$(source: Observable<unknown> | undefined) {
     this._cleanupDataFeed();
     if (source && this._initialized) {
@@ -1133,7 +1134,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
-  /** 实时数据配置（支持 merge/append 模式） */
+  /** ʵʱ�������ã�֧�� merge/append ģʽ�� */
   @Input() set dataFeed(config: DataFeedConfig<unknown> | undefined) {
     this._cleanupDataFeed();
     if (config?.source && this._initialized) {
@@ -1147,12 +1148,12 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
   private _pendingDataFeed: DataFeedConfig | null = null;
 
   private _tryInitialize(): void {
-    // 需要所有必要配置都就绪
+    // ��Ҫ���б�Ҫ���ö�����
     if (this._initialized) return;
     if (!this._datastoreConfig?.fields?.length) return;
     if (!this._columns?.length) return;
 
-    // 初始化服务
+    // ��ʼ������
     this._initialized = true;
     this._service!.initialize({
       datastore: this._datastoreConfig,
@@ -1161,10 +1162,10 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
       defaultPageSize: this._tableConfig?.pagination?.defaultPageSize ?? 10,
     });
 
-    // 清除缓存
+    // �������
     this._pendingData = null;
 
-    // 初始化虚拟滚动
+    // ��ʼ���������
     const vs = this._tableConfig?.virtualScroll;
     if (vs?.enabled) {
       this._virtualRowHeight.set(vs.rowHeight ?? 36);
@@ -1173,7 +1174,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
       this._syncAllRows();
     }
 
-    // 监听数据变化
+    // �������ݱ仯
     const ds = this._service!.getDataStore();
     if (ds) {
       ds.on('rowAdded', () => this._syncAllRows());
@@ -1182,7 +1183,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
       ds.on('bufferChanged', () => this._syncAllRows());
     }
 
-    // 订阅待处理的实时数据源
+    // ���Ĵ������ʵʱ����Դ
     if (this._pendingDataSource) {
       this._subscribeDataFeed(this._pendingDataSource, 'replace');
       this._pendingDataSource = null;
@@ -1193,7 +1194,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
-  // ── 输出 ──────────────────────────────────────────────────────────────────
+  // ���� ��� ������������������������������������������������������������������������������������������������������������������������������������
 
   @Output() readonly rowAdded = new EventEmitter<DataRow>();
   @Output() readonly rowUpdated = new EventEmitter<{ row: DataRow; changes: Record<string, unknown> }>();
@@ -1204,7 +1205,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
   @Output() readonly toolbarAction = new EventEmitter<ToolbarEvent>();
   @Output() readonly pageChanged = new EventEmitter<PageEvent>();
 
-  // ── 内部状态 ───────────────────────────────────────────────────────────────
+  // ���� �ڲ�״̬ ������������������������������������������������������������������������������������������������������������������������������
 
   private _datastoreConfig: DataStoreConfig = { name: 'default', fields: [] };
   private _columns: ColumnConfig[] = [];
@@ -1222,7 +1223,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
   /** TrackBy for virtual scroll rows */
   trackRow = (_index: number, row: any): string => row._id ?? row.id ?? String(_index);
 
-  // ── 响应式 ────────────────────────────────────────────────────────────────────────
+  // ���� ��Ӧʽ ������������������������������������������������������������������������������������������������������������������������������������������������
 
   readonly loading = this._loadingInput.asReadonly();
   readonly searchQuery = () => this._service!.state().globalSearch;
@@ -1249,18 +1250,18 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     return result;
   });
 
-  // ── MatTableDataSource（用实例属性，避免每次 computed 重建导致 mat-sort 状态丢失）
+  // ���� MatTableDataSource����ʵ�����ԣ�����ÿ�� computed �ؽ����� mat-sort ״̬��ʧ��
   private _matTableDataSource = new MatTableDataSource<any>([]);
 
   readonly dataSource = computed(() => {
     const result = this._service!.rows();
     const data = result.rows.map((r: DataRow) => ({ ...r.raw, _id: r.id, _status: r.status }));
-    // 直接替换 data 而非重建 MatTableDataSource 实例，保留 mat-sort 内部状态
+    // ֱ���滻 data �����ؽ� MatTableDataSource ʵ�������� mat-sort �ڲ�״̬
     this._matTableDataSource.data = data;
     return this._matTableDataSource;
   });
 
-  // ── 虚拟滚动 ─────────────────────────────────────────────────────────────
+  // ���� ������� ��������������������������������������������������������������������������������������������������������������������������
 
   readonly virtualScrollEnabled = computed(() => {
     const vs = this._tableConfig?.virtualScroll;
@@ -1275,9 +1276,9 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     return this._allRows().map(r => ({ ...r.raw, _id: r.id, _status: r.status } as any));
   });
 
-  // ── GroupBy ──────────────────────────────────────────────────────────────
+  // ���� GroupBy ����������������������������������������������������������������������������������������������������������������������������
 
-  /** 分组行（用于普通分页模式） */
+  /** �����У�������ͨ��ҳģʽ�� */
   readonly groupRows = computed(() => {
     const cfg = this._tableConfig?.groupBy;
     if (!cfg || this._virtualScrollEnabled()) return [];
@@ -1286,7 +1287,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     const collapsed = this._collapsedGroups();
     const allRows = this._service!.rows().rows;
 
-    // 按分组字段聚合
+    // �������ֶξۺ�
     const map = new Map<string, DataRow[]>();
     for (const row of allRows) {
       const key = String(row.raw[field] ?? '(null)');
@@ -1321,7 +1322,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     const collapsed = this._collapsedGroups();
     const cfg = this._tableConfig?.groupBy;
     if (!cfg) return false;
-    // 当所有组都被折叠时，groupByCollapsed 信号返回 true
+    // �������鶼���۵�ʱ��groupByCollapsed �źŷ��� true
     const allKeys = Array.from(this.groupRows().map(g => g.key));
     return allKeys.every(k => collapsed.has(k));
   }
@@ -1372,10 +1373,10 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     return result;
   }
 
-  // ── 生命周期 ───────────────────────────────────────────────────────────────
+  // ���� �������� ������������������������������������������������������������������������������������������������������������������������������
 
   ngOnInit(): void {
-    // 初始化逻辑已移到 _tryInitialize()，由各个 Input setter 触发
+    // ��ʼ���߼����Ƶ� _tryInitialize()���ɸ��� Input setter ����
   }
 
   ngOnChanges(changes: Record<string, unknown>): void {
@@ -1400,7 +1401,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
   private _syncAllRows(): void {
     const ds = this._service!.getDataStore();
     if (ds) {
-      // 应用当前排序规则（使用 query 而非 getRows，否则虚拟滚动排序失效）
+      // Ӧ�õ�ǰ�������ʹ�� query ���� getRows�����������������ʧЧ��
       const s = this._service!.state();
       const queryOpts: any = { take: 999999 };
       if (s.sortField) {
@@ -1414,15 +1415,15 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
-  // 键盘导航
-  // 目标：ArrowUp/Down 移动焦点行，Enter 编辑，Tab 切换字段，Ctrl+A 全选
-  // ════════════════════════════════════════════════════════════════════════════
+  // �T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T
+  // ���̵���
+  // Ŀ�꣺ArrowUp/Down �ƶ������У�Enter �༭��Tab �л��ֶΣ�Ctrl+A ȫѡ
+  // �T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T
 
-  /** @HostListener 由 Component 直接装饰，无需在 ngInit 中注册 */
+  /** @HostListener �� Component ֱ��װ�Σ������� ngInit ��ע�� */
   @HostListener('keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
-    // 仅在启用键盘导航时处理
+    // �������ü��̵���ʱ����
     if (this._tableConfig?.keyboardNavigation === false) return;
 
     const allRows = this._allRows();
@@ -1494,9 +1495,9 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
-  // Shift+点击 范围选择
-  // ════════════════════════════════════════════════════════════════════════════
+  // �T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T
+  // Shift+��� ��Χѡ��
+  // �T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T
 
   private _rangeAnchor: number | null = null;
 
@@ -1522,7 +1523,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     this._rangeAnchor = rowId;
   }
 
-  // ── 实时数据订阅 ─────────────────────────────────────────────────────────
+  // ���� ʵʱ���ݶ��� ������������������������������������������������������������������������������������������������������������������
 
   private _subscribeDataFeed(source: Observable<Record<string, RawValue>>, mode: 'replace' | 'merge' | 'append'): void {
     this._dataFeedSub = source.subscribe({
@@ -1540,24 +1541,24 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
       next: (rawData) => {
         let data: Record<string, RawValue>[] | null = null;
 
-        // 数据转换
+        // ����ת��
         if (transform) {
           data = transform(rawData);
-          if (!data) return; // transform 返回 null 时跳过
+          if (!data) return; // transform ���� null ʱ����
         } else if (Array.isArray(rawData)) {
           data = rawData;
         } else if (typeof rawData === 'object' && rawData !== null) {
           data = [rawData as Record<string, RawValue>];
         } else {
-          return; // 无效数据，跳过
+          return; // ��Ч���ݣ�����
         }
 
         if (!data.length) return;
 
-        // 根据 mode 处理数据
+        // ���� mode ��������
         const updatedIds = this._handleDataUpdateAdvanced(data, config);
 
-        // 添加高亮效果（仅在 highlightDuration > 0 时）
+        // ��Ӹ���Ч�������� highlightDuration > 0 ʱ��
         if (highlightDuration > 0 && updatedIds.length > 0 && config.keyField) {
           this._highlightUpdatedCells(updatedIds, data, config.keyField, highlightDuration);
         }
@@ -1570,7 +1571,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     if (mode === 'replace') {
       this._service!.setData(Array.isArray(data) ? data : [data]);
     } else if (mode === 'append') {
-      // 追加新数据
+      // ׷��������
       const current = this._service!.getDataStore().getRows();
       const newData = Array.isArray(data) ? data : [data];
       this._service!.setData([...current.map(r => r.raw), ...newData]);
@@ -1607,17 +1608,17 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
         const existingId = keyMap.get(keyValue);
 
         if (existingId !== undefined) {
-          // 更新现有行
+          // ����������
           this._service!.updateRow(existingId, item);
           updatedIds.push(existingId);
         } else {
-          // 新增行
+          // ������
           const newRow = this._service!.addRow(item);
           updatedIds.push(newRow.id);
         }
       }
     } else if (mode === 'append') {
-      // 只追加新数据
+      // ֻ׷��������
       for (const item of data) {
         const keyValue = item[keyField];
         if (!keyMap.has(keyValue)) {
@@ -1630,7 +1631,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
       this._syncAllRows();
     }
 
-    // OnPush 模式下手动触发变更检测
+    // OnPush ģʽ���ֶ�����������
     this._cdr.markForCheck();
 
     return updatedIds;
@@ -1658,7 +1659,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
 
     this._highlightCells.set(new Map(highlights));
 
-    // 定时清除高亮
+    // ��ʱ�������
     setTimeout(() => {
       const current = this._highlightCells();
       for (const key of current.keys()) {
@@ -1682,29 +1683,29 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
-  // ── 虚拟滚动事件 ──────────────────────────────────────────────────────────
+  // ���� ��������¼� ��������������������������������������������������������������������������������������������������������������������
 
   onScrollIndexChange(index: number): void {
     this._virtualScrollIndex.set(index);
   }
 
-  // ── 工具栏操作 ────────────────────────────────────────────────────────────
+  // ���� ���������� ������������������������������������������������������������������������������������������������������������������������
 
   onAdd(): void {
-    // 创建空行数据
+    // ������������
     const emptyRow: Record<string, RawValue> = {};
     for (const col of this._columns) {
       if (col.field === 'id') {
-        // 生成临时 ID
+        // ������ʱ ID
         emptyRow[col.field] = Date.now() as RawValue;
       } else {
         emptyRow[col.field] = '' as RawValue;
       }
     }
-    // 添加到 DataStore
+    // ��ӵ� DataStore
     const newRow = this._service!.addRow(emptyRow);
     this.rowAdded.emit(newRow);
-    // 触发第一个可编辑字段的编辑
+    // ������һ���ɱ༭�ֶεı༭
     const firstEditableCol = this._columns.find(c => c.editable);
     if (firstEditableCol) {
       this.startEdit(newRow.id, firstEditableCol.field, '');
@@ -1728,7 +1729,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     this.toolbarAction.emit({ action: { type: 'custom', id: btn.id } });
   }
 
-  // ── 搜索与过滤 ────────────────────────────────────────────────────────────
+  // ���� ��������� ������������������������������������������������������������������������������������������������������������������������
 
   onSearchChange(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
@@ -1743,7 +1744,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     this._service!.setSort(sort.active, sort.direction);
   }
 
-  // ── 列拖拽重排序 (CDK Drag-Drop) ─────────────────────────────────────────
+  // ���� ����ק������ (CDK Drag-Drop) ����������������������������������������������������������������������������������
   onColumnDragStarted(event: CdkDragStart, field: string): void {}
 
   onColumnDropped(event: CdkDragDrop<ColumnConfig>): void {
@@ -1761,7 +1762,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   onVirtualSortChange(field: string): void {
-    // 虚拟滚动模式的排序处理
+    // �������ģʽ��������
     const direction = this.sortDirection(field);
     this._service!.setSort(field, direction);
     if (this._virtualScrollEnabled()) {
@@ -1777,7 +1778,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     return this._service!.state().columnFilters[field];
   }
 
-  // ── 选择 ──────────────────────────────────────────────────────────────────
+  // ���� ѡ�� ������������������������������������������������������������������������������������������������������������������������������������
 
   toggleSelectAll(checked: boolean): void {
     this._service!.selectAll(checked);
@@ -1802,14 +1803,14 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     return sel > 0 && sel < this._service!.rows().rows.length;
   }
 
-  // ── 行操作 ────────────────────────────────────────────────────────────────
+  // ���� �в��� ��������������������������������������������������������������������������������������������������������������������������������
 
   editRow(row: DataRow): void {
     this.rowUpdated.emit({ row, changes: row.changes });
   }
 
   deleteRow(rowId: number): void {
-    if (confirm('确认删除?')) {
+    if (confirm('ȷ��ɾ��?')) {
       this._service!.deleteRow(rowId);
       this.rowDeleted.emit(rowId);
     }
@@ -1832,9 +1833,9 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     if (this._tableConfig?.rowClick) {
       (this._tableConfig.rowClick as Function)?.(row, event);
     }
-    // 单击行选中/取消选中
+    // ������ѡ��/ȡ��ѡ��
     if (this.selectionMode() !== 'none') {
-      // Shift+点击：范围选择
+      // Shift+�������Χѡ��
       if (event.shiftKey && this._tableConfig?.rangeSelect) {
         this.handleShiftClick(rowId);
       } else {
@@ -1855,7 +1856,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
-  // ── 编辑 ──────────────────────────────────────────────────────────────────
+  // ���� �༭ ������������������������������������������������������������������������������������������������������������������������������������
 
   isEditing(rowId: number, field: string): boolean {
     const e = this._editingCell();
@@ -1884,15 +1885,16 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     this._editValueInternal = target.value;
   }
 
-  // ── 分页 ──────────────────────────────────────────────────────────────────
+  // ���� ��ҳ ������������������������������������������������������������������������������������������������������������������������������������
 
   onPageChange(event: PageEvent): void {
-    this._service!.setPage(event.pageIndex);
+    // setPageSize FIRST because it resets pageIndex to 0, so setPage must be last
     this._service!.setPageSize(event.pageSize);
+    this._service!.setPage(event.pageIndex);
     this.pageChanged.emit(event);
   }
 
-  // ── 格式化 ──────────────────────────────────────────────────────────────────
+  // ���� ��ʽ�� ������������������������������������������������������������������������������������������������������������������������������������
 
   formatCell(row: any, col: ColumnConfig): string {
     const val = row[col.field];
@@ -1905,7 +1907,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     return this._sanitizer.bypassSecurityTrustHtml(html);
   }
 
-  // ── 导出 ═════════════════════════════════════════════════════════════════
+  // ���� ���� �T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T
 
   async exportData(format: 'csv' | 'json' | 'xlsx'): Promise<void> {
     if (format === 'csv') {
@@ -1920,7 +1922,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
-  // ── 导入 ══════════════════════════════════════════════════════════════════
+  // ���� ���� �T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T�T
 
   private _importFormat: 'csv' | 'xlsx' = 'csv';
 
@@ -1946,9 +1948,9 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
       } else {
         count = await this._service!.importFromXLSX(file);
       }
-      console.log(`成功导入 ${count} 条数据`);
+      console.log(`�ɹ����� ${count} ������`);
     } catch (err) {
-      console.error('导入失败:', err);
+      console.error('����ʧ��:', err);
     } finally {
       input.value = '';
       if (this._virtualScrollEnabled()) {
@@ -1971,7 +1973,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     URL.revokeObjectURL(url);
   }
 
-  // ── 列宽调整 ──────────────────────────────────────────────────────────────
+  // ���� �п���� ����������������������������������������������������������������������������������������������������������������������������
 
   private _resizeTh: HTMLElement | null = null;
   private _resizeColumn: string | null = null;
@@ -1991,7 +1993,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     this._resizeStartX = event.pageX;
     this._resizeStartWidth = th.offsetWidth;
 
-    // 创建虚线指示器
+    // ��������ָʾ��
     this._resizeLine = document.createElement('div');
     this._resizeLine.className = 'dt-resize-line';
     this._resizeLine.style.left = `${event.pageX}px`;
@@ -2007,10 +2009,10 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
   private _onResizeMove = (event: MouseEvent): void => {
     if (!this._resizeColumn || !this._resizeLine || !this._resizeTh) return;
 
-    // 更新虚线位置
+    // ��������λ��
     this._resizeLine.style.left = `${event.pageX}px`;
 
-    // 实时预览列宽变化
+    // ʵʱԤ���п�仯
     const diff = event.pageX - this._resizeStartX;
     const newWidth = Math.max(60, this._resizeStartWidth + diff);
     this._resizeTh.style.width = `${newWidth}px`;
@@ -2024,12 +2026,12 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     const diff = event.pageX - this._resizeStartX;
     const newWidth = Math.max(60, this._resizeStartWidth + diff);
 
-    // 更新列配置
+    // ����������
     this._columns = this._columns.map(c =>
       c.field === this._resizeColumn ? { ...c, width: `${newWidth}px` } : c
     );
 
-    // 重置 th 宽度（从配置读取）
+    // ���� th ��ȣ������ö�ȡ��
     const col = this._columns.find(c => c.field === this._resizeColumn);
     if (this._resizeTh) {
       this._resizeTh.style.width = col?.width || `${newWidth}px`;
@@ -2037,7 +2039,7 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
       this._resizeTh.style.transition = '';
     }
 
-    // 移除虚线
+    // �Ƴ�����
     if (this._resizeLine) {
       this._resizeLine.remove();
       this._resizeLine = null;
@@ -2052,14 +2054,14 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
     document.removeEventListener('mouseup', this._onResizeEnd);
   };
 
-  // ── 辅助 ──────────────────────────────────────────────────────────────────
+  // ���� ���� ������������������������������������������������������������������������������������������������������������������������������������
 
   getActionLabel(action: boolean | { icon?: string; label?: string } | undefined, fallback: string): string {
     if (typeof action === 'object' && action) return action.label ?? fallback;
     return fallback;
   }
 
-  // ── 公共 API ──────────────────────────────────────────────────────────────
+  // ���� ���� API ����������������������������������������������������������������������������������������������������������������������������
 
   getService(): DataTableService { return this._service!; }
 

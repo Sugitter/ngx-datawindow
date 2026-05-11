@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+﻿import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -72,7 +72,7 @@ import { RouterModule, RouterOutlet } from '@angular/router';
                     <mat-divider></mat-divider>
                     <a mat-list-item routerLink="/demo/business" routerLinkActive="active" class="business-link">
                         <mat-icon matListItemIcon>business_center</mat-icon>
-                        <span matListItemTitle>🎯 Business Demo</span>
+                        <span matListItemTitle>Business Demo</span>
                     </a>
                     <a mat-list-item routerLink="/demo/import-export" routerLinkActive="active">
                         <mat-icon matListItemIcon>file_download</mat-icon>

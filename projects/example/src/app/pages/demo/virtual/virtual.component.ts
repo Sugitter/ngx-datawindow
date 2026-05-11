@@ -28,7 +28,7 @@ import {
                 </h3>
             </div>
 
-            <div class="virtual-info">
+            <div class="actions-bar">
                 <div class="info-item">
                     <mat-icon>info</mat-icon>
                     <span>Data count: <strong>{{ data.length }}</strong> rows</span>
@@ -52,12 +52,9 @@ import {
         </div>
     `,
     styles: [`
-        .page-container { max-width: 100%; margin: 0; padding: 0; }
-
-        .virtual-info { display: flex; gap: 16px; margin-bottom: 12px; padding: 10px 12px; background: #f8f9fa; border-radius: 6px; flex-wrap: wrap; }
         .info-item { display: flex; align-items: center; gap: 6px; color: #555; font-size: 12px; }
-        .info-item mat-icon { color: #667eea; font-size: 16px; }
-        .info-item strong { color: #667eea; font-size: 14px; }
+        .info-item mat-icon { color: #1976d2; font-size: 16px; }
+        .info-item strong { color: #1976d2; font-size: 14px; }
     `],
     standalone: true,
 })

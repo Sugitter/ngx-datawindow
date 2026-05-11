@@ -27,47 +27,38 @@ import {
   ],
   template: `
     <div class="page-container">
-      <h1>导入导出示例</h1>
-      <p class="description">
-        展示 CSV/Excel 文件的导入导出功能，支持键盘导航和范围选择。
-      </p>
+      <div class="page-header">
+        <h3>
+          <mat-icon>upload_file</mat-icon>
+          Import / Export Demo
+        </h3>
+      </div>
 
-      <mat-card class="demo-card">
-        <mat-card-header>
-          <mat-card-title>操作说明</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <ul class="feature-list">
-            <li><strong>导出</strong>: 点击工具栏导出按钮，选择 CSV/Excel/JSON 格式</li>
-            <li><strong>导入</strong>: 点击工具栏导入按钮，选择 CSV/Excel 文件</li>
-            <li><strong>键盘导航</strong>: 使用 ↑↓ 移动焦点，Enter 编辑，Tab 切换字段，Ctrl+A 全选</li>
-            <li><strong>范围选择</strong>: 按住 Shift 点击选择范围</li>
-          </ul>
-        </mat-card-content>
-      </mat-card>
+      <div class="actions-bar">
+        <div class="info-item">
+          <mat-icon>info</mat-icon>
+          <span>Export: use toolbar export button, choose CSV/Excel/JSON</span>
+        </div>
+        <div class="info-item">
+          <mat-icon>keyboard</mat-icon>
+          <span>Keyboard: ↑↓ navigate, Enter edit, Tab switch fields, Ctrl+A select</span>
+        </div>
+        <div class="info-item">
+          <mat-icon>select_all</mat-icon>
+          <span>Range select: hold Shift and click to select range</span>
+        </div>
+      </div>
 
-      <mat-card class="data-card">
-        <mat-card-header>
-          <mat-card-title>数据表格</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <ngx-datawindow
-            [columns]="columns"
-            [tableConfig]="tableConfig"
-            [data]="data"
-          />
-        </mat-card-content>
-      </mat-card>
+      <ngx-datawindow
+        [columns]="columns"
+        [tableConfig]="tableConfig"
+        [data]="data"
+      />
     </div>
   `,
   styles: [`
-    .page-container { padding: 24px; max-width: 1200px; margin: 0 auto; }
-    h1 { margin-bottom: 8px; }
-    .description { color: #666; margin-bottom: 24px; }
-    .demo-card { margin-bottom: 24px; }
-    .feature-list { margin: 0; padding-left: 20px; }
-    .feature-list li { margin-bottom: 8px; }
-    .data-card { overflow: hidden; }
+    .info-item { display: flex; align-items: center; gap: 6px; color: #555; font-size: 12px; }
+    .info-item mat-icon { color: #1976d2; font-size: 16px; }
   `],
   providers: [DataTableService],
 })
