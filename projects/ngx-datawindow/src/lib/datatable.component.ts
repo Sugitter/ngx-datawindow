@@ -26,6 +26,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { SelectionModel } from '@angular/cdk/collections';
 import { ScrollingModule } from '@angular/cdk/scrolling';
+import { DragDropModule, CdkDragStart, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 
 import { DataTableService } from './datatable.service';
 import {
@@ -50,6 +51,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
     MatCheckboxModule, MatInputModule, MatFormFieldModule,
     MatSelectModule, MatButtonModule, MatIconModule,
     MatTooltipModule, ScrollingModule, MatMenuModule, MatProgressSpinnerModule,
+    DragDropModule,
   ],
   template: `
     <div class="dt-container" [class.dt-loading]="loading()">
@@ -241,7 +243,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
                     @if (col.aggregate) {
                       <span class="dt-agg-badge">{{ col.aggregate.type.toUpperCase() }}</span>
                     }
-                    <div class="dt-resize-handle"
+                    <div class="dt-resize-handle" cdkDragHandle
                       (mousedown)="onResizeStart($event, col.field)"
                       (click)="$event.stopPropagation()">
                     </div>
@@ -357,7 +359,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
                 [style.minWidth]="col.minWidth || '60px'"
                 class="dt-header-resizable"
                 [mat-sort-header]="col.sortable !== false ? col.field : ''"
-                [disabled]="col.sortable === false">
+                [disabled]="col.sortable === false" cdkDrag cdkDragStarted="onColumnDragStarted($event, col.field)" cdkDropListDropped="onColumnDropped($event)">
                 {{ col.header }}
                 @if (col.aggregate) {
                   <span class="dt-agg-badge">{{ col.aggregate.type.toUpperCase() }}</span>
@@ -1739,6 +1741,16 @@ export class DataTableComponent implements OnInit, OnChanges, OnDestroy {
 
   onSortChange(sort: Sort): void {
     this._service!.setSort(sort.active, sort.direction);
+  }
+
+  // ── 列拖拽重排序 (CDK Drag-Drop) ─────────────────────────────────────────
+  onColumnDragStarted(event: CdkDragStart, field: string): void {}
+
+  onColumnDropped(event: CdkDragDrop<ColumnConfig>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    moveItemInArray(this._columns, event.previousIndex, event.currentIndex);
+    // Update order field for each column
+
   }
 
   /** Toggle sort direction for virtual mode header click */
