@@ -654,6 +654,7 @@ export interface ToolbarEvent { action: ToolbarAction; }
     .dt-virtual-viewport {
       height: 100%;
       min-height: 400px;
+      background: white;
     }
 
     /* �T�T�T ������� div �в��� �T�T�T */
@@ -690,6 +691,11 @@ export interface ToolbarEvent { action: ToolbarAction; }
       text-overflow: ellipsis;
       white-space: nowrap;
       border-right: var(--dt-grid-width) solid var(--dt-grid-color);
+      background: white;
+    }
+
+    .dt-virtual-cell:hover {
+      background: var(--color-bg-hover, #f5f5f5);
     }
 
     .dt-virtual-cell:last-child {
@@ -703,6 +709,9 @@ export interface ToolbarEvent { action: ToolbarAction; }
       position: relative;
       user-select: none;
       cursor: pointer;
+      border-right: var(--dt-grid-width) solid var(--dt-grid-color);
+      border-bottom: var(--dt-grid-width) solid var(--dt-grid-color);
+      border-bottom-width: 2px;
     }
 
     .dt-virtual-empty {
