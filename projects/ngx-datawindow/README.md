@@ -77,22 +77,17 @@ npm install ngx-datawindow
 
 ## Quick Start
 
-### 1. Import the module
+### 1. Import the component (standalone)
 
 ```typescript
-import { DataTableModule } from 'ngx-datawindow';
-
-@NgModule({
-  imports: [DataTableModule],
-})
-export class AppModule {}
+import { DataTableComponent } from 'ngx-datawindow';
 ```
 
-### 2. Basic usage
+### 2. Basic usage (Standalone - Recommended)
 
 ```typescript
 import { Component } from '@angular/core';
-import { DataTableComponent, DataStoreConfig, ColumnConfig, TableConfig } from 'ngx-datawindow';
+import { DataTableComponent, createDataStore, DataStoreConfig, ColumnConfig, TableConfig } from 'ngx-datawindow';
 
 @Component({
   selector: 'app-employees',
@@ -375,18 +370,28 @@ The **DataStore engine** is written in pure TypeScript with zero Angular depende
 
 ## Roadmap
 
+### Phase 2: Offline & Virtual Scroll (completed)
+- ✅ Offline Persistence (IndexedDB)
+- ✅ Optimistic Locking (rowVersionMap)
+- ✅ Virtual Scroll (CDK)
+- ✅ Multiple DisplayModes (Grid / Group / Tree / Card / TreeGrid)
+- ✅ Report Engine (multi-section reports)
+- ✅ Offline Storage Adapter (IndexedDBManager)
+
 ### Phase 3: Developer Experience (in progress)
 - [ ] Visual column config designer
 - [ ] Declarative persistence configuration
-- [ ] Multiple presentation styles (Grid / Form / Card)
-- [ ] PDF / Excel export
-- [ ] Full documentation + StackBlitz demos
+- [ ] PDF export (xlsx already supported)
+- [ ] Full documentation + Storybook demos
+- [ ] Master-Detail view
+- [ ] Pivot table view
+- [ ] Gantt chart view
 
 ### Future
 - [ ] Database connection layer (optional backend integration)
-- [ ] Nested datawindows (Master-Detail)
-- [ ] Report engine (grouped reports, crosstabs)
+- [ ] Report designer (drag-and-drop)
 - [ ] Real-time collaboration
+- [ ] Multi-table DataWindow (join queries)
 
 ---
 

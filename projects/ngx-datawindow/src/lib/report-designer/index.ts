@@ -39,3 +39,11 @@ export {
 
 export { ReportDesignerComponent } from './report-designer.component';
 export { ReportDesignerDemoComponent } from './report-designer-demo.component';
+
+export { ReportDesignerToolbarComponent } from './toolbar/report-designer-toolbar.component';
+export { ReportDesignerToolboxComponent } from './toolbox/report-designer-toolbox.component';
+export { ReportDesignerCanvasComponent } from './canvas/report-designer-canvas.component';
+export { ReportDesignerPropertyPanelComponent } from './property-panel/report-designer-property-panel.component';
+export { ReportDesignerNewComponent } from './report-designer-new.component';
+export { UndoRedoService } from './services/undo-redo.service';
+export { ConfigureColumnsDialogComponent } from './dialogs/configure-columns-dialog.component';

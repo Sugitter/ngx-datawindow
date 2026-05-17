@@ -47,6 +47,7 @@ export {
 } from './lib/offline';
 
 // Report Designer
+// Legacy (单文件大组件)
 export {
   ReportDesignerComponent,
   ReportDesignerDemoComponent,
@@ -74,3 +75,14 @@ export {
   RenderContext,
   BandContext,
 } from './lib/report-designer';
+
+// Angular Material 化报表设计器 (模块化子组件)
+export {
+  ReportDesignerToolbarComponent,
+  ReportDesignerToolboxComponent,
+  ReportDesignerCanvasComponent,
+  ReportDesignerPropertyPanelComponent,
+  ReportDesignerNewComponent,
+  UndoRedoService,
+  ConfigureColumnsDialogComponent,
+} from './lib/report-designer/index';

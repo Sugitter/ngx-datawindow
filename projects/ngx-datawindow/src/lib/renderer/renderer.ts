@@ -6,6 +6,24 @@
  * Adapter translates DataWindowView to framework-specific DOM.
  */
 
+/**
+ * DisplayMode - All supported view modes
+ *
+ * Implemented:
+ *   - grid: Traditional tabular grid
+ *   - group: Grouped/aggregated view
+ *   - tree: Hierarchical tree view
+ *
+ * Placeholder (fallback to grid):
+ *   - form: Form layout for single record (TBD)
+ *   - report: Report layout with sections (TBD)
+ *   - card: Card grid layout (TBD)
+ *   - master-detail: Master table with expandable detail (TBD)
+ *   - tree-grid: Tree with grid columns (TBD)
+ *   - export: Export preview mode (TBD)
+ *   - pivot: Pivot table view (TBD)
+ *   - gantt: Gantt chart view (TBD)
+ */
 export type DisplayMode = 'grid' | 'form' | 'group' | 'tree' | 'report'
   | 'card' | 'master-detail' | 'tree-grid' | 'export' | 'pivot' | 'gantt';
 

@@ -10,7 +10,6 @@ export * from './datatable.component';
 export * from './datatable.service';
 export * from './datastore';
 export * from './models';
-export * from './adapter';
 export * from './virtual-scroll-strategy';
 export * from './offline';
 export * from './renderer';

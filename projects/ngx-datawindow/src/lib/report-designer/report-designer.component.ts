@@ -509,14 +509,44 @@ interface CanvasItem extends ReportItem {
                             }
                           </select>
                         </div>
+                        <div class="prop-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+                          <label style="width:auto">Y轴字段（系列）</label>
+                          @for (f of fields(); track f.name) {
+                            <label class="checkbox-label">
+                              <input type="checkbox"
+                                     [checked]="$any(item.config)['yFields']?.includes(f.name)"
+                                     (change)="toggleChartYField($any(item.config), f.name, $event)" />
+                              {{ f.label ?? f.name }}
+                            </label>
+                          }
+                        </div>
+                        <div class="prop-row">
+                          <mat-checkbox [(ngModel)]="$any(item.config)['showLegend']">显示图例</mat-checkbox>
+                        </div>
+                        <div class="prop-row">
+                          <mat-checkbox [(ngModel)]="$any(item.config)['showDataLabels']">显示数据标签</mat-checkbox>
+                        </div>
                       </div>
                     } @else if (item.type === 'table') {
                       <div class="prop-section">
                         <div class="prop-section-title">表格属性</div>
                         <div class="prop-row">
-                          <label>斑马纹</label>
-                          <mat-checkbox [(ngModel)]="$any(item.config).dataRow.alternatingColors">启用</mat-checkbox>
+                          <mat-checkbox [(ngModel)]="$any(item.config).dataRow.alternatingColors">启用斑马纹</mat-checkbox>
                         </div>
+                        <div class="prop-section-title" style="margin-top:12px">列配置</div>
+                        @for (col of $any(item.config)['columns']; track $index) {
+                          <div class="table-col-row">
+                            <input class="prop-input small" [(ngModel)]="col.label" placeholder="列标题" />
+                            <input class="prop-input small" type="number" [(ngModel)]="col.width" placeholder="宽" />
+                            <mat-checkbox [(ngModel)]="col.visible">显</mat-checkbox>
+                            <button mat-icon-button class="col-del-btn" (click)="removeTableColumn($any(item.config), $index)">
+                              <mat-icon>close</mat-icon>
+                            </button>
+                          </div>
+                        }
+                        <button mat-stroked-button class="add-col-btn" (click)="addTableColumn($any(item.config))">
+                          <mat-icon>add</mat-icon> 添加列
+                        </button>
                       </div>
                     } @else {
                       <div class="prop-section">
@@ -888,6 +918,7 @@ interface CanvasItem extends ReportItem {
       border: 1px dashed transparent;
       transition: border-color 0.15s;
       box-sizing: border-box;
+      min-height: 20px;
     }
     .canvas-band:hover { border-color: #c0c0e0; }
     .band-active { border-color: #3f51b5 !important; background: rgba(63,81,181,0.03); }
@@ -1059,6 +1090,23 @@ interface CanvasItem extends ReportItem {
     }
     .grid-btn mat-icon { font-size: 14px; width: 14px; height: 14px; }
     .grid-btn:hover { border-color: #3f51b5; background: #f0f0ff; }
+
+    /* 复选框标签 */
+    .checkbox-label {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 12px; color: #333; cursor: pointer; user-select: none;
+    }
+    .checkbox-label input { cursor: pointer; }
+
+    /* 表格列配置 */
+    .table-col-row {
+      display: flex; align-items: center; gap: 4px; margin-bottom: 6px;
+    }
+    .table-col-row .prop-input.small { width: 70px; }
+    .col-del-btn { width: 24px !important; height: 24px !important; line-height: 24px !important; }
+    .col-del-btn mat-icon { font-size: 14px !important; width: 14px !important; height: 14px !important; }
+    .add-col-btn { width: 100%; margin-top: 4px; height: 30px; font-size: 12px; }
+    .add-col-btn mat-icon { font-size: 16px; width: 16px; height: 16px; }
 
     /* 样式管理 */
     .styles-panel { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
@@ -1500,8 +1548,6 @@ export class ReportDesignerComponent implements OnInit, OnDestroy {
   }
 
   onCanvasDrop(event: CdkDragDrop<ReportItem[]>): void {
-    // 不处理画布内排序，拖拽位置已通过 mousedown/mousemove 在 canvas-item 层面处理
-    // 此处仅处理列表内的位置调整
     if (event.previousContainer === event.container) {
       // 同带区内的报表项排序
       const bandId = this.activeBandId();
@@ -1513,6 +1559,31 @@ export class ReportDesignerComponent implements OnInit, OnDestroy {
         band.items = items;
         this.template.update(t => ({ ...t }));
       }
+    } else {
+      // 跨容器：从工具箱/数据源拖入画布（创建新报表项）
+      const itemType = event.item.data as ReportItemType;
+      const bandId = this.activeBandId();
+      const band = this.template().bands.find(b => b.id === bandId);
+      if (!band) return;
+      const item = this._createItem(itemType, bandId);
+      if (event.dropPoint) {
+        const canvasEl = document.getElementById('canvas-drop-list');
+        if (canvasEl) {
+          const rect = canvasEl.getBoundingClientRect();
+          const scale = this.zoom() / 100;
+          const scrollEl = canvasEl.closest('.canvas-scroll') as HTMLElement;
+          const scrollLeft = scrollEl ? scrollEl.scrollLeft : 0;
+          const scrollTop = scrollEl ? scrollEl.scrollTop : 0;
+          const relX = (event.dropPoint.x - rect.left + scrollLeft) / scale;
+          const relY = (event.dropPoint.y - rect.top + scrollTop) / scale;
+          item.x = Math.max(0, Math.round(relX - item.width / 2));
+          item.y = Math.max(0, Math.round(relY - item.height / 2));
+        }
+      }
+      this._pushUndo();
+      band.items.push(item);
+      this.selectedItemId.set(item.id);
+      this.template.update(t => ({ ...t }));
     }
   }
 
@@ -1617,6 +1688,25 @@ export class ReportDesignerComponent implements OnInit, OnDestroy {
         return;
       }
     }
+  }
+
+  toggleChartYField(config: any, fieldName: string, event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    if (!config['yFields']) config['yFields'] = [];
+    if (checked) {
+      if (!config['yFields'].includes(fieldName)) config['yFields'].push(fieldName);
+    } else {
+      config['yFields'] = config['yFields'].filter((f: string) => f !== fieldName);
+    }
+  }
+
+  addTableColumn(config: any): void {
+    if (!config['columns']) config['columns'] = [];
+    config['columns'].push({ label: '', width: 100, visible: true, format: '' });
+  }
+
+  removeTableColumn(config: any, index: number): void {
+    config['columns'].splice(index, 1);
   }
 
   onItemGeometryChange(item: ReportItem): void {
